@@ -1,0 +1,21 @@
+{
+  "name": "gr4dient",
+  "private": true,
+  "description": "Animated gradient generator that loops on the beat. One HTML file.",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "check": "node scripts/check.mjs && eslint index.html scripts && prettier --check index.html scripts eslint.config.mjs",
+    "format": "prettier --write index.html scripts eslint.config.mjs",
+    "smoke": "node scripts/smoke.mjs",
+    "serve": "python3 -m http.server 8000"
+  },
+  "devDependencies": {
+    "@eslint/js": "9.39.5",
+    "eslint": "9.39.5",
+    "eslint-plugin-html": "8.2.1",
+    "globals": "16.5.0",
+    "prettier": "3.9.10",
+    "puppeteer": "24.43.1"
+  }
+}

@@ -1,0 +1,3122 @@
+<!doctype html>
+<html lang="en">
+  <!-- gr4dient by r352, MIT License, https://github.com/reszkovy/gr4dient. Shader noise: webgl-noise (c) 2011 Ashima Arts, Stefan Gustavson, MIT License; hash12: Dave Hoskins, Hash without Sine, MIT License. -->
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>gr4dient: free animated gradient generator, PNG and MP4 | r352</title>
+    <meta
+      name="description"
+      content="Free animated gradient generator. Mesh, flow and light-beam gradients that loop on the beat. Pick from 14 presets, drag the colours, export PNG and MP4."
+    />
+    <meta name="theme-color" content="#0A0A0A" />
+    <link rel="canonical" href="https://www.r352.com/gr4dient" />
+    <meta name="robots" content="index,follow,max-image-preview:large" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="gr4dient: free animated gradient generator" />
+    <meta property="og:site_name" content="r352" />
+    <meta
+      property="og:description"
+      content="Free animated gradient generator. Mesh, flow and light-beam gradients that loop on the beat. Pick from 14 presets, drag the colours, export PNG and MP4."
+    />
+    <meta property="og:url" content="https://www.r352.com/gr4dient" />
+    <meta property="og:image" content="https://www.r352.com/gr4dient/og.jpg" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="An animated lime and black gradient made in gr4dient" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="gr4dient: free animated gradient generator" />
+    <meta
+      name="twitter:description"
+      content="Free animated gradient generator. Mesh, flow and light-beam gradients that loop on the beat. Pick from 14 presets, drag the colours, export PNG and MP4."
+    />
+    <meta name="twitter:image" content="https://www.r352.com/gr4dient/og.jpg" />
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        "name": "gr4dient",
+        "url": "https://www.r352.com/gr4dient",
+        "description": "Free animated gradient generator. Mesh, flow and light-beam gradients that loop on the beat. Pick from 14 presets, drag the colours, export PNG and MP4.",
+        "applicationCategory": "DesignApplication",
+        "operatingSystem": "Any (runs in the browser, WebGL)",
+        "browserRequirements": "Requires WebGL",
+        "offers": { "@type": "Offer", "price": "0", "priceCurrency": "EUR" },
+        "image": "https://www.r352.com/gr4dient/og.jpg",
+        "inLanguage": ["en", "pl"],
+        "featureList": [
+          "Mesh, flow, fold and light-beam gradient modes",
+          "14 presets",
+          "Draggable colour points",
+          "Tempo in BPM with loops that land on the bar",
+          "Grain and dither texture",
+          "PNG export up to 2K",
+          "MP4 loop export"
+        ],
+        "creator": { "@type": "Organization", "name": "r352", "url": "https://www.r352.com/" }
+      }
+    </script>
+    <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+    <link rel="preconnect" href="https://api.fontshare.com" />
+    <link rel="stylesheet" href="https://api.fontshare.com/v2/css?f[]=tanker@400&display=swap" />
+    <style>
+      @font-face {
+        font-family: "Plus Jakarta Sans";
+        src: url("fonts/PlusJakartaSans-wght.woff2") format("woff2");
+        font-weight: 200 800;
+        font-display: swap;
+      }
+      /* Tokens from the r352.com design system. Dark-first, single theme by design. */
+      :root {
+        color-scheme: dark;
+        --fg: #f5f5f5;
+        --lime: #d4ff00;
+        --lime-hover: #e0ff33;
+        --logo: #daff45;
+        --line: rgba(255, 255, 255, 0.14);
+        --ink: rgba(255, 255, 255, 0.55);
+        --strong: rgba(255, 255, 255, 0.85);
+        --sans: "Plus Jakarta Sans", system-ui, -apple-system, sans-serif;
+        --display: "Tanker", sans-serif;
+        --mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+        --ease: cubic-bezier(0.22, 1, 0.36, 1);
+        --inset: 10px;
+        --r: 22px;
+      }
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      html,
+      body {
+        height: 100%;
+        background: #000;
+        color: var(--fg);
+        font-family: var(--sans);
+        font-size: 14px;
+        -webkit-font-smoothing: antialiased;
+        overflow: hidden;
+      }
+      button,
+      input,
+      select {
+        font: inherit;
+        color: inherit;
+      }
+      button {
+        cursor: pointer;
+        border: 0;
+        background: none;
+      }
+      ::selection {
+        background: #fff;
+        color: #000;
+      }
+      :focus-visible {
+        outline: 2px solid var(--lime);
+        outline-offset: 2px;
+      }
+
+      #stage {
+        position: fixed;
+        inset: 0;
+        display: block;
+        width: 100%;
+        height: 100%;
+        touch-action: none;
+      }
+
+      /* ── Deck: the r352.com bridge frame. Black casing outside, notches top and bottom. ── */
+      .deck {
+        position: fixed;
+        inset: var(--inset);
+        z-index: 8;
+        pointer-events: none;
+        border: 1px solid var(--line);
+        border-radius: var(--r);
+        box-shadow: 0 0 0 100vmax #000;
+      }
+      .notch {
+        position: absolute;
+        left: 50%;
+        transform: translateX(-50%);
+        background: #000;
+        box-sizing: border-box;
+        padding: 5px calc(16px + 0.24em) 6px 16px;
+        font-family: var(--mono);
+        font-size: 8.5px;
+        letter-spacing: 0.24em;
+        text-indent: 0.24em;
+        text-transform: uppercase;
+        color: rgba(255, 255, 255, 0.62);
+        white-space: nowrap;
+        border: 1px solid var(--line);
+      }
+      .notch.t {
+        top: -1px;
+        border-top: 0;
+        border-radius: 0 0 14px 14px;
+        padding-top: 3px;
+        padding-bottom: 8px;
+      }
+      .notch.b {
+        bottom: -1px;
+        border-bottom: 0;
+        border-radius: 14px 14px 0 0;
+        padding-top: 8px;
+        padding-bottom: 3px;
+      }
+      .notch::before,
+      .notch::after {
+        content: "";
+        position: absolute;
+        width: 10px;
+        height: 10px;
+      }
+      .notch::before {
+        left: -10px;
+      }
+      .notch::after {
+        right: -10px;
+      }
+      .notch.t::before,
+      .notch.t::after {
+        top: 0;
+      }
+      .notch.b::before,
+      .notch.b::after {
+        bottom: 0;
+      }
+      .notch.t::before {
+        background: radial-gradient(
+          circle at 0 100%,
+          transparent 8.5px,
+          var(--line) 9px,
+          var(--line) 9.7px,
+          #000 10.2px
+        );
+      }
+      .notch.t::after {
+        background: radial-gradient(
+          circle at 100% 100%,
+          transparent 8.5px,
+          var(--line) 9px,
+          var(--line) 9.7px,
+          #000 10.2px
+        );
+      }
+      .notch.b::before {
+        background: radial-gradient(circle at 0 0, transparent 8.5px, var(--line) 9px, var(--line) 9.7px, #000 10.2px);
+      }
+      .notch.b::after {
+        background: radial-gradient(
+          circle at 100% 0,
+          transparent 8.5px,
+          var(--line) 9px,
+          var(--line) 9.7px,
+          #000 10.2px
+        );
+      }
+      .notch b {
+        color: var(--lime);
+        font-weight: 400;
+      }
+      .ign {
+        position: fixed;
+        inset: var(--inset);
+        width: calc(100% - 2 * var(--inset));
+        height: calc(100% - 2 * var(--inset));
+        z-index: 9;
+        pointer-events: none;
+        overflow: visible;
+      }
+      .ign rect {
+        x: 0.75px;
+        y: 0.75px;
+        width: calc(100% - 1.5px);
+        height: calc(100% - 1.5px);
+        rx: var(--r);
+        fill: none;
+        stroke: var(--lime);
+        stroke-width: 1.5;
+        stroke-dasharray: 100;
+        stroke-dashoffset: 100;
+        animation:
+          draw 1.1s var(--ease) 0.15s forwards,
+          fade 0.6s ease 1.3s forwards;
+      }
+      @keyframes draw {
+        to {
+          stroke-dashoffset: 0;
+        }
+      }
+      @keyframes fade {
+        to {
+          opacity: 0;
+        }
+      }
+
+      /* Left rail: tool number, build. Right rail: the loop playhead, one tick per bar. */
+      .rail {
+        position: fixed;
+        left: 11px;
+        top: 0;
+        bottom: 0;
+        width: 26px;
+        z-index: 9;
+        pointer-events: none;
+        font-family: var(--mono);
+        font-size: 8.5px;
+        letter-spacing: 0.22em;
+        text-transform: uppercase;
+        color: var(--ink);
+      }
+      .rail span {
+        position: absolute;
+        left: 8px;
+        top: 50%;
+        transform: rotate(-90deg) translateX(-50%);
+        transform-origin: left top;
+        white-space: nowrap;
+      }
+      .rail i {
+        position: absolute;
+        left: 10px;
+        width: 5px;
+        height: 1px;
+        background: var(--line);
+      }
+      .rail .build {
+        top: auto;
+        bottom: 36px;
+        transform: rotate(-90deg);
+        transform-origin: left bottom;
+        opacity: 0.7;
+      }
+      .loop {
+        position: fixed;
+        right: 17px;
+        top: 96px;
+        bottom: 72px;
+        width: 7px;
+        z-index: 9;
+        pointer-events: none;
+      }
+      .loop .trk {
+        position: absolute;
+        left: 3px;
+        top: 0;
+        bottom: 0;
+        width: 1px;
+        background: var(--line);
+      }
+      .loop .tk {
+        position: absolute;
+        left: 0;
+        width: 7px;
+        height: 1px;
+        background: var(--line);
+      }
+      .loop .cur {
+        position: absolute;
+        left: 2px;
+        width: 3px;
+        height: 18px;
+        margin-top: -9px;
+        background: var(--lime);
+        border-radius: 2px;
+        box-shadow: 0 0 8px rgba(212, 255, 0, 0.55);
+      }
+
+      /* ── Header, as on r352.com: logo mark + 352, divider, tagline; functions on the right ── */
+      .head {
+        position: fixed;
+        left: var(--inset);
+        right: var(--inset);
+        top: var(--inset);
+        z-index: 9;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 22px 48px 0 38px;
+        pointer-events: none;
+      }
+      .head::before {
+        content: "";
+        position: absolute;
+        inset: 0 0 -50px;
+        border-radius: var(--r) var(--r) 0 0;
+        background: linear-gradient(to bottom, rgba(0, 0, 0, 0.4), transparent);
+        pointer-events: none;
+        z-index: -1;
+      }
+      .head > * {
+        pointer-events: auto;
+      }
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        color: var(--logo);
+        text-decoration: none;
+      }
+      .brand svg {
+        display: block;
+        width: auto;
+        overflow: visible;
+      }
+      .lg-sym {
+        height: 40px;
+      }
+      .lg-txt {
+        height: 36px;
+      }
+      .lg-ring {
+        transition:
+          opacity 0.5s var(--ease),
+          transform 0.5s var(--ease);
+        transform-origin: center;
+        transform-box: fill-box;
+      }
+      .lg-r,
+      .lg-num {
+        transition: transform 0.5s var(--ease);
+      }
+      .brand:hover .lg-ring {
+        opacity: 0;
+        transform: scale(0.95);
+      }
+      .brand:hover .lg-r {
+        transform: translateX(150px);
+      }
+      .brand:hover .lg-num {
+        transform: translateX(-10px);
+      }
+      .left {
+        display: flex;
+        align-items: center;
+        gap: 20px;
+      }
+      .left .div {
+        display: block;
+        width: 1px;
+        height: 16px;
+        background: #fff;
+        opacity: 0.3;
+      }
+      .tagline {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-family: var(--display);
+        font-size: 12px;
+        letter-spacing: 0.2em;
+        text-transform: uppercase;
+        color: #fff;
+      }
+      .tagline .dot {
+        opacity: 0.45;
+      }
+      .tagline button {
+        letter-spacing: 0.2em;
+        text-transform: uppercase;
+        color: rgba(255, 255, 255, 0.72);
+        transition: color 0.3s var(--ease);
+      }
+      .tagline button:hover {
+        color: #fff;
+      }
+      .tagline button[aria-pressed="true"] {
+        color: var(--lime);
+      }
+      .tagline .prod {
+        color: #fff;
+      }
+      .fn {
+        display: flex;
+        align-items: center;
+        gap: 18px;
+      }
+      .burger {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        gap: 6px;
+        width: 40px;
+        height: 40px;
+        padding: 0 9px;
+      }
+      .burger i {
+        display: block;
+        height: 1.5px;
+        background: var(--lime);
+        border-radius: 2px;
+        transition:
+          transform 0.5s var(--ease),
+          background 0.3s var(--ease);
+      }
+      .burger:hover i {
+        background: #fff;
+      }
+      body.ui-off .burger i:first-child {
+        transform: translateY(3.75px) rotate(45deg);
+      }
+      body.ui-off .burger i:last-child {
+        transform: translateY(-3.75px) rotate(-45deg);
+      }
+      .hud .play {
+        font: inherit;
+        letter-spacing: inherit;
+        text-transform: inherit;
+        color: var(--strong);
+        gap: 6px;
+      }
+      .hud .play:hover {
+        color: var(--lime);
+      }
+      .hud .play svg {
+        width: 9px;
+        height: 9px;
+      }
+      .cta {
+        display: inline-flex;
+        align-items: center;
+        gap: 14px;
+        height: 44px;
+        padding: 0 5px 0 20px;
+        border-radius: 999px;
+        background: var(--lime);
+        color: #0a0a0a;
+        font-family: var(--mono);
+        font-size: 10px;
+        letter-spacing: 0.22em;
+        text-transform: uppercase;
+        white-space: nowrap;
+        transition: background 0.3s var(--ease);
+      }
+      .cta:hover {
+        background: var(--lime-hover);
+      }
+      .cta i {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 34px;
+        height: 34px;
+        border-radius: 50%;
+        background: #0a0a0a;
+        color: var(--lime);
+        font-style: normal;
+        transition: transform 0.5s var(--ease);
+      }
+      .cta:hover i {
+        transform: rotate(90deg);
+      }
+      .cta i svg {
+        width: 15px;
+        height: 15px;
+      }
+      .cta.dark {
+        background: rgba(10, 10, 10, 0.9);
+        color: #fff;
+        box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+      }
+      .cta.dark:hover {
+        background: #1a1a1a;
+      }
+      .cta.dark i {
+        background: var(--lime);
+        color: #0a0a0a;
+      }
+
+      /* ── HUD bottom-left: only real state (beat in the loop, tempo, language, frame rate) ── */
+      .hud {
+        position: fixed;
+        left: 44px;
+        bottom: 18px;
+        z-index: 10;
+        display: flex;
+        gap: 14px;
+        align-items: center;
+        height: 34px;
+        background: #0a0a0a;
+        padding: 0 14px;
+        border-radius: 6px;
+        box-shadow:
+          0 10px 28px rgba(0, 0, 0, 0.38),
+          0 1px 2px rgba(0, 0, 0, 0.35);
+        font-family: var(--mono);
+        font-size: 8.5px;
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+        color: var(--ink);
+        font-variant-numeric: tabular-nums;
+      }
+      .hud > * {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        height: 18px;
+      }
+      .hud b {
+        color: var(--strong);
+        font-weight: 600;
+        min-width: 2.6em;
+      }
+      .hud .led {
+        width: 5px;
+        height: 5px;
+        border-radius: 50%;
+        background: var(--lime);
+        box-shadow: 0 0 6px rgba(212, 255, 0, 0.6);
+      }
+      .hud .led.off {
+        background: #555;
+        box-shadow: none;
+      }
+      .hud .sep {
+        opacity: 0.35;
+      }
+      .lang button {
+        font: inherit;
+        letter-spacing: inherit;
+        text-transform: inherit;
+        color: var(--strong);
+      }
+      .lang button[aria-pressed="true"] {
+        color: var(--lime);
+      }
+      .lang button:hover {
+        color: var(--lime);
+      }
+
+      /* ── Draggable colour points: dot + ring, like the r352.com cursor ── */
+      .handles {
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+        z-index: 2;
+      }
+      .handle {
+        position: absolute;
+        width: 30px;
+        height: 30px;
+        margin: -15px 0 0 -15px;
+        border-radius: 50%;
+        pointer-events: auto;
+        cursor: grab;
+        box-shadow:
+          inset 0 0 0 1.5px rgba(255, 255, 255, 0.9),
+          0 4px 16px rgba(0, 0, 0, 0.35);
+        transition: transform 0.3s var(--ease);
+      }
+      .handle::after {
+        content: "";
+        position: absolute;
+        inset: 8px;
+        border-radius: 50%;
+        background: var(--c, #fff);
+        box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.25);
+      }
+      .handle:hover {
+        transform: scale(1.15);
+      }
+      .handle.drag {
+        cursor: grabbing;
+        transform: scale(1.3);
+      }
+      .handle.focus::after {
+        inset: 11px;
+        background: var(--lime);
+        box-shadow: 0 0 10px rgba(212, 255, 0, 0.7);
+      }
+
+      /* ── Panel: the deck-end glass sheet with its lime marker ── */
+      .panel {
+        position: fixed;
+        top: 96px;
+        right: 40px;
+        bottom: 30px;
+        width: 368px;
+        z-index: 9;
+        border-radius: 24px;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        background: linear-gradient(180deg, rgba(30, 30, 30, 0.74), rgba(10, 10, 10, 0.86));
+        backdrop-filter: blur(24px) saturate(1.2);
+        -webkit-backdrop-filter: blur(24px) saturate(1.2);
+        box-shadow:
+          inset 0 0 0 1px rgba(255, 255, 255, 0.07),
+          inset 0 1px 0 rgba(255, 255, 255, 0.1),
+          0 30px 80px -20px rgba(0, 0, 0, 0.8);
+        transition:
+          transform 0.6s var(--ease),
+          opacity 0.5s var(--ease);
+      }
+      .panel::before {
+        content: "";
+        position: absolute;
+        left: 28px;
+        top: 0;
+        width: 56px;
+        height: 2px;
+        border-radius: 0 0 2px 2px;
+        background: var(--lime);
+        box-shadow: 0 0 14px rgba(212, 255, 0, 0.6);
+        z-index: 2;
+      }
+      .panel-scroll {
+        flex: 1;
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        padding: 26px 28px 10px;
+        scrollbar-width: thin;
+        scrollbar-color: #333 transparent;
+        counter-reset: sec;
+      }
+      .kick {
+        font-family: var(--mono);
+        font-size: 9px;
+        letter-spacing: 0.24em;
+        text-transform: uppercase;
+        color: var(--ink);
+      }
+      .kick b {
+        color: var(--lime);
+        font-weight: 400;
+      }
+      .panel-head h1 {
+        font-size: 30px;
+        font-weight: 700;
+        letter-spacing: -0.035em;
+        line-height: 0.98;
+        margin-top: 12px;
+        text-wrap: balance;
+      }
+      .panel-head p {
+        font-size: 13px;
+        color: var(--ink);
+        margin-top: 10px;
+        line-height: 1.45;
+      }
+      section.grp {
+        padding: 18px 0 20px;
+      }
+      section.grp + section.grp,
+      .panel-head + section.grp {
+        box-shadow: 0 -1px 0 rgba(255, 255, 255, 0.07);
+      }
+      .panel-head {
+        padding-bottom: 22px;
+      }
+      .lbl {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 14px;
+        font-family: var(--mono);
+        font-size: 9px;
+        letter-spacing: 0.24em;
+        text-transform: uppercase;
+        color: var(--ink);
+      }
+      .lbl > span:first-child {
+        counter-increment: sec;
+      }
+      .lbl > span:first-child::before {
+        content: counter(sec, decimal-leading-zero) "  ";
+        white-space: pre;
+        color: var(--lime);
+      }
+      .lbl .sub {
+        letter-spacing: 0.16em;
+        color: rgba(255, 255, 255, 0.35);
+      }
+
+      .seg {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 4px;
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 999px;
+        padding: 4px;
+      }
+      .seg button {
+        height: 34px;
+        border-radius: 999px;
+        font-family: var(--display);
+        font-size: 11.5px;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: rgba(255, 255, 255, 0.7);
+        transition:
+          background 0.3s var(--ease),
+          color 0.3s var(--ease);
+      }
+      .seg button:hover {
+        color: #fff;
+      }
+      .seg button[aria-pressed="true"] {
+        background: var(--lime);
+        color: #000;
+      }
+
+      .presets {
+        scroll-padding-left: 28px;
+        display: flex;
+        gap: 8px;
+        overflow-x: auto;
+        padding-bottom: 6px;
+        margin: 0 -28px;
+        padding-left: 28px;
+        padding-right: 28px;
+        scroll-snap-type: x mandatory;
+        scrollbar-width: none;
+      }
+      .presets::-webkit-scrollbar {
+        display: none;
+      }
+      .preset {
+        flex: none;
+        width: 96px;
+        scroll-snap-align: start;
+        text-align: left;
+      }
+      .preset i {
+        display: block;
+        width: 96px;
+        height: 64px;
+        background: #111 center/cover no-repeat;
+        transition:
+          transform 0.4s var(--ease),
+          box-shadow 0.4s var(--ease);
+      }
+      .preset:hover i {
+        transform: translateY(-2px);
+      }
+      .preset[aria-pressed="true"] i {
+        box-shadow: 0 0 0 2px var(--lime);
+      }
+      .preset span {
+        display: block;
+        margin-top: 8px;
+        font-family: var(--display);
+        font-size: 11px;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: rgba(255, 255, 255, 0.75);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .preset[aria-pressed="true"] span {
+        color: var(--lime);
+      }
+
+      .swatches {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        flex-wrap: wrap;
+      }
+      .sw {
+        position: relative;
+        width: 46px;
+        height: 46px;
+        box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+      }
+      .sw input {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        opacity: 0;
+        cursor: pointer;
+      }
+      .sw-tools {
+        display: flex;
+        gap: 6px;
+        margin-top: 12px;
+        flex-wrap: wrap;
+      }
+      .mini {
+        height: 28px;
+        padding: 0 12px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.06);
+        font-family: var(--mono);
+        font-size: 9px;
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+        color: var(--strong);
+        transition:
+          background 0.3s var(--ease),
+          color 0.3s var(--ease);
+      }
+      .mini:hover {
+        background: rgba(255, 255, 255, 0.12);
+        color: var(--lime);
+      }
+      .mini:disabled {
+        opacity: 0.3;
+        cursor: default;
+      }
+      .mini:disabled:hover {
+        background: rgba(255, 255, 255, 0.06);
+        color: var(--strong);
+      }
+
+      .sl {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        align-items: center;
+        row-gap: 6px;
+        margin-bottom: 13px;
+      }
+      .sl label {
+        font-size: 13px;
+        color: var(--strong);
+      }
+      .sl output {
+        font-family: var(--mono);
+        font-size: 9.5px;
+        letter-spacing: 0.12em;
+        color: var(--ink);
+        font-variant-numeric: tabular-nums;
+        text-transform: uppercase;
+      }
+      .sl input {
+        grid-column: 1/-1;
+      }
+      input[type="range"] {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 100%;
+        height: 18px;
+        background: transparent;
+        cursor: pointer;
+        --p: 50%;
+      }
+      input[type="range"]::-webkit-slider-runnable-track {
+        height: 2px;
+        border-radius: 2px;
+        background: linear-gradient(to right, var(--lime) var(--p), rgba(255, 255, 255, 0.14) var(--p));
+      }
+      input[type="range"]::-moz-range-track {
+        height: 2px;
+        border-radius: 2px;
+        background: linear-gradient(to right, var(--lime) var(--p), rgba(255, 255, 255, 0.14) var(--p));
+      }
+      input[type="range"]::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        width: 14px;
+        height: 14px;
+        border-radius: 50%;
+        background: #0a0a0a;
+        margin-top: -6px;
+        box-shadow:
+          inset 0 0 0 1.5px var(--lime),
+          0 0 10px rgba(212, 255, 0, 0.35);
+      }
+      input[type="range"]::-moz-range-thumb {
+        width: 14px;
+        height: 14px;
+        border: 0;
+        border-radius: 50%;
+        background: #0a0a0a;
+        box-shadow: inset 0 0 0 1.5px var(--lime);
+      }
+      .tg {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 13px;
+        font-size: 13px;
+        color: var(--strong);
+      }
+      .sw-btn {
+        position: relative;
+        width: 38px;
+        height: 20px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.12);
+        transition: background 0.3s var(--ease);
+      }
+      .sw-btn::after {
+        content: "";
+        position: absolute;
+        left: 3px;
+        top: 3px;
+        width: 14px;
+        height: 14px;
+        border-radius: 50%;
+        background: #fff;
+        transition: transform 0.3s var(--ease);
+      }
+      .sw-btn[aria-checked="true"] {
+        background: var(--lime);
+      }
+      .sw-btn[aria-checked="true"]::after {
+        transform: translateX(18px);
+        background: #0a0a0a;
+      }
+
+      .row {
+        display: flex;
+        gap: 8px;
+      }
+      select {
+        appearance: none;
+        -webkit-appearance: none;
+        height: 38px;
+        flex: 1;
+        min-width: 0;
+        border: 0;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.06)
+          url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%23D4FF00' stroke-width='1.5'/%3E%3C/svg%3E")
+          right 14px center no-repeat;
+        padding: 0 32px 0 16px;
+        font-family: var(--mono);
+        font-size: 9.5px;
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+        cursor: pointer;
+      }
+      select option {
+        background: #111;
+        color: #fff;
+      }
+      .row select {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        opacity: 0;
+        pointer-events: none;
+      }
+      .dd {
+        position: relative;
+        flex: 1;
+        min-width: 0;
+      }
+      .dd-btn {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        width: 100%;
+        height: 38px;
+        padding: 0 14px 0 16px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.06);
+        font-family: var(--mono);
+        font-size: 9.5px;
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+        color: var(--strong);
+        transition:
+          background 0.3s var(--ease),
+          color 0.3s var(--ease);
+      }
+      .dd-btn:hover,
+      .dd.open .dd-btn {
+        background: rgba(255, 255, 255, 0.1);
+        color: #fff;
+      }
+      .dd-btn svg {
+        width: 10px;
+        height: 6px;
+        flex: none;
+        transition: transform 0.4s var(--ease);
+      }
+      .dd.open .dd-btn svg {
+        transform: rotate(180deg);
+      }
+      .dd-list {
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: calc(100% + 8px);
+        z-index: 5;
+        padding: 6px;
+        border-radius: 18px;
+        list-style: none;
+        background: linear-gradient(180deg, rgba(34, 34, 34, 0.96), rgba(12, 12, 12, 0.98));
+        backdrop-filter: blur(18px);
+        -webkit-backdrop-filter: blur(18px);
+        box-shadow:
+          inset 0 0 0 1px rgba(255, 255, 255, 0.08),
+          0 24px 50px -12px rgba(0, 0, 0, 0.8);
+        opacity: 0;
+        transform: translateY(6px) scale(0.98);
+        transform-origin: 50% 100%;
+        pointer-events: none;
+        transition:
+          opacity 0.25s var(--ease),
+          transform 0.35s var(--ease);
+      }
+      .dd.open .dd-list {
+        opacity: 1;
+        transform: none;
+        pointer-events: auto;
+      }
+      .dd-list li {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        height: 34px;
+        padding: 0 12px;
+        border-radius: 999px;
+        cursor: pointer;
+        font-family: var(--mono);
+        font-size: 9.5px;
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+        color: rgba(255, 255, 255, 0.72);
+        transition:
+          background 0.2s var(--ease),
+          color 0.2s var(--ease);
+      }
+      .dd-list li:hover,
+      .dd-list li.kb {
+        background: rgba(255, 255, 255, 0.07);
+        color: #fff;
+      }
+      .dd-list li[aria-selected="true"] {
+        color: var(--lime);
+      }
+      .dd-list li span {
+        margin-right: auto;
+      }
+      .dd-list li[aria-selected="true"]::before {
+        content: "";
+        flex: none;
+        width: 5px;
+        height: 5px;
+        border-radius: 50%;
+        background: var(--lime);
+        box-shadow: 0 0 6px rgba(212, 255, 0, 0.6);
+      }
+      em.mini.pro {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+      }
+      .export-main {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 8px;
+        margin-top: 12px;
+      }
+      .export-main .cta {
+        justify-content: space-between;
+        height: 52px;
+        padding-left: 22px;
+      }
+      .export-main .cta i {
+        width: 42px;
+        height: 42px;
+      }
+      .export-code {
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr;
+        gap: 6px;
+        margin-top: 10px;
+      }
+      .export-code .mini {
+        height: 32px;
+      }
+      .note {
+        font-size: 12px;
+        color: var(--ink);
+        margin-top: 12px;
+        line-height: 1.5;
+      }
+      .panel-foot {
+        display: none;
+        padding: 12px 28px 16px;
+        font-family: var(--mono);
+        font-size: 9px;
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+        color: var(--ink);
+        justify-content: space-between;
+        align-items: center;
+      }
+      .panel-foot a {
+        color: var(--ink);
+        text-decoration: none;
+      }
+      .panel-foot a:hover {
+        color: var(--lime);
+      }
+      .sheet-grip {
+        display: none;
+      }
+
+      .toast {
+        position: fixed;
+        left: 50%;
+        bottom: 44px;
+        transform: translate(-50%, 16px);
+        z-index: 20;
+        background: #0a0a0a;
+        color: var(--strong);
+        height: 34px;
+        padding: 0 16px;
+        border-radius: 6px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-family: var(--mono);
+        font-size: 9px;
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+        box-shadow: 0 10px 28px rgba(0, 0, 0, 0.38);
+        opacity: 0;
+        pointer-events: none;
+        transition:
+          opacity 0.4s var(--ease),
+          transform 0.5s var(--ease);
+      }
+      .toast::before {
+        content: "";
+        width: 5px;
+        height: 5px;
+        border-radius: 50%;
+        background: var(--lime);
+        box-shadow: 0 0 6px rgba(212, 255, 0, 0.6);
+      }
+      .toast.on {
+        opacity: 1;
+        transform: translate(-50%, 0);
+      }
+
+      body.ui-off .panel {
+        transform: translateX(calc(100% + 60px));
+        opacity: 0;
+        pointer-events: none;
+      }
+      body.ui-off .handles,
+      body.ui-off .tagline,
+      body.ui-off .left .div,
+      body.ui-off #btnRandom,
+      body.ui-off .hud,
+      body.ui-off .head::before {
+        opacity: 0;
+        pointer-events: none;
+      }
+      .handles,
+      .tagline,
+      .left .div,
+      #btnRandom,
+      .hud,
+      .head::before {
+        transition: opacity 0.5s var(--ease);
+      }
+
+      .rec-dot {
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: #ff3b30;
+        animation: blink 1s steps(2) infinite;
+      }
+      @keyframes blink {
+        50% {
+          opacity: 0.2;
+        }
+      }
+
+      @media (max-width: 520px) {
+        .tagline,
+        .left .div {
+          display: none;
+        }
+      }
+      @media (max-width: 900px) {
+        :root {
+          --inset: 6px;
+          --r: 16px;
+        }
+        .notch,
+        .rail,
+        .loop,
+        .hud,
+        .ign {
+          display: none;
+        }
+        .head {
+          padding: 16px 16px 0 18px;
+        }
+        .lg-sym {
+          height: 30px;
+        }
+        .lg-txt {
+          height: 27px;
+        }
+        .fn {
+          gap: 14px;
+        }
+        .fn .cta {
+          height: 38px;
+          padding: 0 4px 0 14px;
+          gap: 10px;
+        }
+        .fn .cta i {
+          width: 30px;
+          height: 30px;
+        }
+        .panel {
+          top: auto;
+          left: 12px;
+          right: 12px;
+          bottom: 12px;
+          width: auto;
+          height: 54vh;
+          border-radius: 20px;
+        }
+        .panel.min {
+          transform: translateY(calc(100% - 62px));
+        }
+        .sheet-grip {
+          display: flex;
+          justify-content: center;
+          padding: 10px 0 0;
+        }
+        .sheet-grip button {
+          width: 44px;
+          height: 4px;
+          border-radius: 999px;
+          background: rgba(255, 255, 255, 0.25);
+        }
+        .panel-scroll {
+          padding-top: 14px;
+        }
+        .panel-foot {
+          display: flex;
+        }
+        body.ui-off .panel {
+          transform: translateY(calc(100% + 20px));
+        }
+        .toast {
+          bottom: auto;
+          top: 70px;
+        }
+      }
+      @media (max-width: 420px) {
+        .fn .cta .t {
+          display: none;
+        }
+        .fn .cta {
+          padding: 0 4px;
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        * {
+          transition: none !important;
+          animation: none !important;
+        }
+        .ign {
+          display: none;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="stage" aria-label="Gradient preview"></canvas>
+    <div class="handles" id="handles"></div>
+
+    <div class="deck" aria-hidden="true"
+      ><span class="notch t">r352 · <b>gr4dient</b> · gradients on the beat</span
+      ><span class="notch b">Move fast, steady cadence.</span></div
+    >
+    <svg class="ign" aria-hidden="true"><rect pathLength="100" /></svg>
+    <div class="rail" aria-hidden="true"
+      ><i style="top: 10%"></i><i style="top: 20%"></i><i style="top: 30%"></i><i style="top: 40%"></i
+      ><i style="top: 60%"></i><i style="top: 70%"></i><i style="top: 80%"></i><i style="top: 90%"></i
+      ><span>tool 01 · gr4dient</span><span class="build">build 28.09.2026 · v1</span></div
+    >
+    <div class="loop" id="loop" aria-hidden="true"><span class="trk"></span><span class="cur" id="loopCur"></span></div>
+
+    <header class="head">
+      <div class="left">
+        <a class="brand" href="https://r352.com" target="_blank" rel="noopener" aria-label="r352.com"
+          ><svg class="lg-sym" viewBox="0 0 658 676" fill="none" aria-hidden="true">
+            <path
+              class="lg-ring"
+              d="M0 337.632C0 136.127 154.934 0 328.676 0C502.418 0 657.352 136.127 657.352 337.632C657.352 539.136 502.418 675.264 328.676 675.264C154.934 675.264 0 539.136 0 337.632ZM78.8106 337.632C78.8106 492.566 189.862 601.827 328.676 601.827C465.699 601.827 578.541 492.566 578.541 337.632C578.541 182.697 465.699 73.4372 328.676 73.4372C189.862 73.4372 78.8106 182.697 78.8106 337.632Z"
+              fill="currentColor"
+            />
+            <path
+              class="lg-r"
+              d="M468.492 402.837C474.353 406.798 478.709 412.183 481.56 418.994C484.411 425.806 485.282 432.617 484.174 439.428C483.065 446.239 480.055 452.496 475.145 458.199C470.393 463.743 464.769 467.544 458.275 469.604C455.424 470.237 452.414 470.633 449.246 470.792C446.078 470.95 441.88 470.792 436.653 470.316C431.584 469.841 428.575 469.445 427.624 469.128C412.418 468.495 396.499 465.089 379.866 458.912C363.393 452.734 349.137 445.843 337.098 438.24C325.06 430.479 313.338 422.004 301.933 412.817C290.687 403.63 282.45 396.422 277.222 391.195C271.995 385.968 268.114 381.77 265.58 378.602L260.59 373.137L261.066 395.472C261.382 422.4 261.699 440.141 262.016 448.695C262.333 460.416 259.323 469.92 252.987 477.207C246.176 484.969 237.543 489.404 227.088 490.513C216 491.463 206.417 488.533 198.339 481.721C189.627 474.276 185.112 465.644 184.795 455.823C184.795 447.111 184.479 429.132 183.845 401.887C183.528 372.741 183.211 353.258 182.895 343.437C181.944 314.291 180.598 282.69 178.855 248.634C178.222 237.229 181.311 227.646 188.122 219.884C194.616 212.439 202.932 208.083 213.07 206.816H214.02L214.496 206.341C219.089 203.49 225.267 200.559 233.029 197.55C272.312 181.709 311.199 173.393 349.691 172.601C362.363 172.285 372.738 174.74 380.817 179.967C390.479 186.145 397.132 195.886 400.775 209.192C407.587 235.803 401.251 262.256 381.767 288.551C377.807 293.778 371.63 301.223 363.234 310.886C358.324 316.746 354.601 321.102 352.067 323.954C349.849 327.122 349.374 330.211 350.641 333.22C355.552 342.566 361.809 351.04 369.412 358.644C377.015 366.088 384.539 371.791 391.984 375.751C399.429 379.553 406.636 382.879 413.606 385.73C420.576 388.423 426.199 390.086 430.476 390.72L436.891 392.145C443.702 393.413 448.85 394.521 452.335 395.472C458.829 397.531 464.215 399.986 468.492 402.837ZM309.299 262.652C310.883 255.524 308.586 250.535 302.408 247.684C298.765 246.1 293.934 246.1 287.915 247.684C283.321 248.951 274.688 251.881 262.016 256.475C258.848 257.425 257.422 259.484 257.739 262.652L259.64 307.084C259.64 309.935 261.066 311.836 263.917 312.786C266.926 313.737 269.382 313.103 271.282 310.886C279.994 299.798 286.172 292.511 289.815 289.026C295.359 282.849 299.399 278.334 301.933 275.483C306.21 270.573 308.665 266.296 309.299 262.652Z"
+              fill="currentColor"
+            /></svg
+          ><svg class="lg-txt" viewBox="0 0 460 373" fill="none" aria-hidden="true">
+            <g transform="translate(0 93.61)">
+              <g class="lg-num">
+                <path
+                  d="M384.68 0C429.239 1.34289e-05 452.953 24.2341 452.953 58.8916C452.953 85.4712 439.662 101.368 416.21 119.869L404.17 129.37C397.153 134.907 401.068 146.188 410.006 146.188H444.312C449.516 146.188 453.734 150.406 453.734 155.609V174.551C453.734 179.754 449.516 183.973 444.312 183.973H324.786C319.583 183.973 315.364 179.754 315.364 174.551V153.824C315.364 150.973 316.655 148.275 318.876 146.486L383.638 94.3311C399.012 82.0838 406.568 72.7026 406.568 60.7158C406.568 45.6021 396.927 38.0449 384.419 38.0449C370.347 38.045 360.185 48.2084 360.185 64.8857C360.184 66.3247 359.018 67.4911 357.579 67.4912H319.013C316.134 67.4912 313.801 65.1576 313.801 62.2793C313.801 27.6218 340.641 0 384.68 0Z"
+                  fill="currentColor"
+                />
+                <path
+                  d="M284.428 1.56348C289.631 1.56364 293.849 5.78201 293.849 10.9854V29.9268C293.848 35.13 289.631 39.3485 284.428 39.3486H218.976C213.926 39.3486 209.774 43.329 209.561 48.374L209.535 49.0186C209.192 57.1999 219.48 62.6203 227.393 60.5127C231.901 59.3118 236.98 58.6319 242.774 58.6318C279.777 58.6318 304.794 83.9079 304.794 121.692C304.794 164.428 272.481 185.536 232.872 185.536C193.784 185.536 167.675 163.62 162.045 134.016C161.046 128.766 165.393 124.299 170.736 124.299H198.274C203.009 124.299 206.846 127.896 208.535 132.319C212.32 142.236 220.695 149.054 233.393 149.054C246.162 149.054 258.67 139.933 258.67 121.692C258.67 105.276 248.507 93.8105 232.872 93.8105C224.761 93.8106 216.651 96.9457 210.867 104.922C208.754 107.835 205.574 109.967 201.976 109.967H173.135C167.771 109.967 163.49 105.496 163.722 100.138L167.597 10.5781C167.815 5.53781 171.965 1.56349 177.01 1.56348H284.428Z"
+                  fill="currentColor"
+                />
+                <path
+                  d="M74.5273 0C117.523 8.22167e-05 142.279 19.2833 142.279 49.7715C142.279 55.4679 141.279 60.5718 139.472 65.0879C135.791 74.2831 136.951 101.811 141.291 110.714C144.098 116.471 145.667 123.46 145.667 131.855C145.667 163.647 118.045 185.536 73.2245 185.536C31.7576 185.536 4.62142 167.016 0.537033 132.409C-0.0728369 127.242 4.21835 122.996 9.4218 122.996H36.4384C41.54 122.996 45.5161 127.145 46.9628 132.037C50.6834 144.618 61.5844 150.617 75.3085 150.617C88.3377 150.617 99.0214 143.061 99.0214 128.989C99.0214 117.263 90.9438 109.706 74.0058 109.706H63.8837C58.6803 109.706 54.4618 105.488 54.4618 100.284V83.167C54.4618 77.9636 58.6803 73.7451 63.8837 73.7451H71.4003C87.8168 73.745 96.1551 65.6672 96.1552 53.4199C96.1552 40.6513 85.7318 34.918 73.4843 34.918C61.8026 34.9181 52.8614 40.7211 49.1952 50.4248C47.4242 55.1124 43.4982 59.1523 38.4872 59.1523H12.4277C7.17002 59.1523 2.84452 54.8198 3.73235 49.6377C8.89026 19.533 36.4501 0 74.5273 0Z"
+                  fill="currentColor"
+                />
+              </g>
+            </g></svg
+        ></a>
+        <span class="div" aria-hidden="true"></span>
+        <span class="tagline"><span class="prod">gr4dient</span></span>
+      </div>
+      <div class="fn">
+        <button class="burger" id="btnUi" title="Hide interface (H)" aria-label="Hide interface"><i></i><i></i></button>
+        <button class="cta" id="btnRandom" title="Randomize (R)"
+          ><span class="t" data-i18n="random">Randomize</span
+          ><i
+            ><svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.6"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M20 12a8 8 0 1 1-2.34-5.66M20 4v5h-5" /></svg></i
+        ></button>
+      </div>
+    </header>
+
+    <div class="hud" aria-label="Status">
+      <button class="play" id="btnPlay" title="Play / pause (Space)"
+        ><svg viewBox="0 0 24 24" fill="currentColor" id="icoPlay"><path d="M7 5h3v14H7zM14 5h3v14h-3z" /></svg
+        ><span data-i18n="pause" id="lblPlay">Pause</span></button
+      >
+      <span class="sep">|</span>
+      <span><i class="led" id="led"></i><b id="beat">1.1</b></span>
+      <span class="sep">|</span>
+      <span id="bpm">129 BPM</span>
+      <span class="sep">|</span>
+      <span class="lang" role="group" aria-label="Language"
+        ><button data-lang="en" aria-pressed="true">EN</button> /
+        <button data-lang="pl" aria-pressed="false">PL</button></span
+      >
+      <span class="sep">|</span>
+      <span id="fps">60 fps</span>
+    </div>
+
+    <aside class="panel" id="panel">
+      <div class="sheet-grip"><button id="grip" aria-label="Toggle panel"></button></div>
+      <div class="panel-scroll">
+        <div class="panel-head">
+          <div class="kick">tool 01 · <b>gr4dient</b></div>
+          <h1 data-i18n="title">Animated gradient generator</h1>
+          <p data-i18n="tagline">Gradients that move on the beat. Set the tempo, every loop lands on the bar.</p>
+        </div>
+
+        <section class="grp grp-mode">
+          <div class="lbl"><span data-i18n="mode">Mode</span></div>
+          <div class="seg" id="modes">
+            <button data-mode="0" data-i18n="m0">Field</button>
+            <button data-mode="1" data-i18n="m1">Current</button>
+            <button data-mode="2" data-i18n="m2">Fold</button>
+            <button data-mode="3" data-i18n="m3">Beam</button>
+          </div>
+        </section>
+
+        <section class="grp">
+          <div class="lbl"><span data-i18n="presets">Moves</span><span class="sub" id="presetCount"></span></div>
+          <div class="presets" id="presets"></div>
+        </section>
+
+        <section class="grp">
+          <div class="lbl"
+            ><span data-i18n="colors">Colors</span><span class="sub" data-i18n="colorsHint">click to edit</span></div
+          >
+          <div class="swatches" id="swatches"></div>
+          <div class="sw-tools">
+            <button class="mini" id="colAdd">+ <span data-i18n="add">Add</span></button>
+            <button class="mini" id="colDel">- <span data-i18n="remove">Remove</span></button>
+            <button class="mini" id="colRev" data-i18n="reverse">Reverse</button>
+            <button class="mini" id="colShuf" data-i18n="shuffle">Shuffle</button>
+          </div>
+        </section>
+
+        <section class="grp">
+          <div class="lbl"
+            ><span data-i18n="shape">Shape</span
+            ><button class="mini" id="btnSeed" data-i18n="newSeed">New seed</button></div
+          >
+          <div id="slShape"></div>
+        </section>
+
+        <section class="grp">
+          <div class="lbl"><span data-i18n="motion">Motion</span></div>
+          <div id="slMotion"></div>
+        </section>
+
+        <section class="grp">
+          <div class="lbl"><span data-i18n="texture">Texture</span></div>
+          <div id="slTexture"></div>
+        </section>
+
+        <section class="grp">
+          <div class="lbl"><span data-i18n="finish">Finish</span></div>
+          <div id="slFinish"></div>
+        </section>
+
+        <section class="grp">
+          <div class="lbl"><span data-i18n="export">Export</span></div>
+          <div class="row">
+            <select id="selAspect" aria-label="Aspect">
+              <option value="screen">Screen</option
+              ><option value="16:9" selected>16:9</option
+              ><option value="1:1">1:1</option>
+              <option value="4:5">4:5</option
+              ><option value="9:16">9:16</option
+              ><option value="3:2">3:2</option
+              ><option value="21:9">21:9</option>
+            </select>
+            <select id="selSize" aria-label="Resolution">
+              <option value="1920">HD 1920</option
+              ><option value="2560" selected>2K 2560</option
+              ><option value="3840">4K 3840</option
+              ><option value="5760">6K 5760</option>
+            </select>
+          </div>
+          <div class="export-main">
+            <button class="cta" id="btnPng"
+              ><span data-i18n="png">Save PNG</span
+              ><i
+                ><svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.6"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M12 5v14M6 13l6 6 6-6" /></svg></i
+            ></button>
+            <button class="cta dark" id="btnVideo"
+              ><span id="lblVideo" data-i18n="video">Record loop</span
+              ><i
+                ><svg viewBox="0 0 24 24" aria-hidden="true">
+                  <circle cx="12" cy="12" r="5" fill="currentColor" /></svg></i
+            ></button>
+          </div>
+          <div class="export-code">
+            <button class="mini pro" id="btnCss">CSS <em>PRO</em></button>
+            <button class="mini pro" id="btnCode"><span data-i18n="code">Code</span> <em>PRO</em></button>
+            <button class="mini" id="btnLink" data-i18n="link">Link</button>
+          </div>
+          <p class="note" id="exportNote" data-i18n="exportNote"
+            >Video renders the loop frame by frame on your tempo (MP4, 60 fps), so it cuts cleanly on the bar.</p
+          >
+        </section>
+        <section class="grp about">
+          <div class="lbl"><span data-i18n="about">About</span></div>
+          <p class="note" data-i18n="about1"
+            >gr4dient is a free gradient generator that runs in your browser. Build mesh gradients from up to five
+            colours, switch to flowing, folded or light-beam modes, add grain or dither, and export a PNG or a looping
+            MP4 for backgrounds, slides, social posts and websites.</p
+          >
+          <p class="note" data-i18n="about2"
+            >Motion is tied to tempo: set the BPM and the number of bars, and the loop ends exactly on the bar, so it
+            cuts cleanly to music. No sign-up, nothing is uploaded, the link keeps your settings.</p
+          >
+        </section>
+      </div>
+      <div class="panel-foot"
+        ><span class="lang" role="group" aria-label="Language"
+          ><button data-lang="en" aria-pressed="true">EN</button> /
+          <button data-lang="pl" aria-pressed="false">PL</button></span
+        ><a href="https://www.r352.com/" target="_blank" rel="noopener">r352.com</a></div
+      >
+    </aside>
+
+    <div class="toast" id="toast"></div>
+
+    <!-- Renderer core. Shared by the editor and by the copied embed code, so what you see is what you ship. -->
+    <script id="grain-core">
+      (function (root) {
+        var SIG = "r352.gr4dient/1";
+        var FS = [
+          "// r352.gr4dient/1 · r352.com/gr4dient",
+          "precision highp float;",
+          "uniform vec2 uRes;uniform float uPhase;uniform int uMode;uniform int uCount;",
+          "uniform vec3 uCol[5];uniform vec2 uPts[5];uniform vec2 uFocus;",
+          "uniform float uSeed,uScale,uWarp,uSoft,uAngle,uMotion,uGrain,uGrainSize,uGrainAnim,uDither,uLevels,uPixel,uContrast,uSat,uBright,uVignette;",
+          "#define TAU 6.28318530718",
+          "// hash12: Dave Hoskins, Hash without Sine (MIT License), shadertoy.com/view/4djSRW",
+          "// snoise: Ian McEwan, Ashima Arts, and Stefan Gustavson, webgl-noise (MIT License, (c) 2011 Ashima Arts), github.com/ashima/webgl-noise",
+          "float hash12(vec2 p){vec3 p3=fract(vec3(p.xyx)*.1031);p3+=dot(p3,p3.yzx+33.33);return fract((p3.x+p3.y)*p3.z);}",
+          "vec3 permute(vec3 x){return mod(((x*34.0)+1.0)*x,289.0);}",
+          "float snoise(vec2 v){const vec4 C=vec4(0.211324865405187,0.366025403784439,-0.577350269189626,0.024390243902439);",
+          " vec2 i=floor(v+dot(v,C.yy));vec2 x0=v-i+dot(i,C.xx);vec2 i1=(x0.x>x0.y)?vec2(1.0,0.0):vec2(0.0,1.0);",
+          " vec4 x12=x0.xyxy+C.xxzz;x12.xy-=i1;i=mod(i,289.0);",
+          " vec3 p=permute(permute(i.y+vec3(0.0,i1.y,1.0))+i.x+vec3(0.0,i1.x,1.0));",
+          " vec3 m=max(0.5-vec3(dot(x0,x0),dot(x12.xy,x12.xy),dot(x12.zw,x12.zw)),0.0);m=m*m;m=m*m;",
+          " vec3 x=2.0*fract(p*C.www)-1.0;vec3 h=abs(x)-0.5;vec3 ox=floor(x+0.5);vec3 a0=x-ox;",
+          " m*=1.79284291400159-0.85373472095314*(a0*a0+h*h);vec3 g;g.x=a0.x*x0.x+h.x*x0.y;g.yz=a0.yz*x12.xz+h.yz*x12.yw;",
+          " return 130.0*dot(m,g);}",
+          "float fbm(vec2 p){float s=0.0,a=0.5;mat2 m=mat2(1.6,1.2,-1.2,1.6);for(int i=0;i<4;i++){s+=a*snoise(p);p=m*p;a*=0.5;}return s;}",
+          "float fbm2(vec2 p){return 0.62*snoise(p)+0.24*snoise(mat2(1.6,1.2,-1.2,1.6)*p+3.7);}",
+          "float bayer2(vec2 a){a=floor(a);return fract(dot(a,vec2(0.5,a.y*0.75)));}",
+          "float bayer4(vec2 a){return bayer2(0.5*a)*0.25+bayer2(a);}",
+          "float bayer8(vec2 a){return bayer4(0.5*a)*0.25+bayer2(a);}",
+          "vec2 SO;",
+          "vec2 lp(float r){float a=uPhase*TAU;return vec2(cos(a),sin(a))*r*uMotion;}",
+          "vec3 pal(int i){vec3 c=uCol[0];for(int j=1;j<5;j++){if(j==i)c=uCol[j];}return c;}",
+          "vec3 ramp(float t){t=clamp(t,0.0,1.0);float x=t*float(uCount-1);float fi=floor(x);float f=x-fi;f=mix(f,smoothstep(0.0,1.0,f),0.6);int i=int(fi);return mix(pal(i),pal(i+1),f);}",
+          "vec3 oklab2srgb(vec3 c){float l_=c.x+0.3963377774*c.y+0.2158037573*c.z;float m_=c.x-0.1055613458*c.y-0.0638541728*c.z;float s_=c.x-0.0894841775*c.y-1.2914855480*c.z;",
+          " float l=l_*l_*l_,m=m_*m_*m_,s=s_*s_*s_;",
+          " vec3 lin=vec3(4.0767416621*l-3.3077115913*m+0.2309699292*s,-1.2684380046*l+2.6097574011*m-0.3413193965*s,-0.0041960863*l-0.7034186147*m+1.7076147010*s);",
+          " lin=clamp(lin,0.0,1.0);return mix(12.92*lin,1.055*pow(lin,vec3(1.0/2.4))-0.055,step(0.0031308,lin));}",
+          // MESH: colour points blended by inverse distance, domain-warped by noise
+          "vec3 mesh(vec2 uv){vec2 q=uv*uScale*0.8+SO;",
+          " vec2 w=vec2(fbm2(q+lp(0.6)),fbm2(q+vec2(5.2,1.3)+lp(0.6)));vec2 p=uv+w*uWarp*0.3;",
+          " float pw=mix(5.0,2.0,uSoft);vec3 acc=vec3(0.0);float ws=0.0;float a=uPhase*TAU;",
+          " for(int j=0;j<5;j++){if(j<uCount){float fj=float(j);",
+          "  vec2 c=uPts[j]+uMotion*0.12*vec2(sin(a*(1.0+mod(fj,2.0))+fj*1.7),cos(a*(1.0+mod(fj+1.0,2.0))+fj*2.3));",
+          "  float d=length(p-c);float wt=1.0/pow(d*d+0.0015,pw*0.5);acc+=uCol[j]*wt;ws+=wt;}}",
+          " return acc/ws;}",
+          // FLOW: two levels of domain warping mapped onto the palette ramp
+          "vec3 flow(vec2 uv){vec2 p=uv*uScale*0.5+SO;",
+          " vec2 q=vec2(fbm2(p+lp(0.45)),fbm2(p+vec2(5.2,1.3)-lp(0.45)));",
+          " vec2 r=vec2(fbm2(p+q*uWarp*1.2+vec2(1.7,9.2)+lp(0.3)),fbm2(p+q*uWarp*1.2+vec2(8.3,2.8)));",
+          " float f=fbm2(p+r*uWarp*1.2);return ramp(f*mix(1.3,0.8,uSoft)+0.5);}",
+          // SILK: a height field lit like folded fabric
+          "float silkH(vec2 p){vec2 q=p;q.y+=snoise(p*0.35+SO+lp(0.4))*uWarp*0.8;return sin(q.y*1.6+snoise(q*0.45+SO+lp(0.25))*2.2);}",
+          "vec3 silk(vec2 uv){vec2 p=uv*uScale*1.2;float e=0.004;",
+          " float h=silkH(p);float hx=silkH(p+vec2(e,0.0));float hy=silkH(p+vec2(0.0,e));",
+          " vec3 n=normalize(vec3(-(hx-h)/e,-(hy-h)/e,mix(2.2,6.0,uSoft)));vec3 L=normalize(vec3(-0.5,0.6,0.8));",
+          " float dif=clamp(dot(n,L),0.0,1.0);float spec=pow(clamp(dot(reflect(-L,n),vec3(0.0,0.0,1.0)),0.0,1.0),24.0);",
+          " vec3 c=ramp(h*0.5+0.5);c.x*=mix(0.6,1.08,dif);c.x+=spec*0.16*(1.0-uSoft*0.5);return c;}",
+          // RAYS: light beams from a focus point
+          "vec3 rays(vec2 uv){vec2 d=uv-uFocus;float r=length(d);vec2 dir=d/(r+1e-4);",
+          " float n=fbm(dir*uScale*2.0+SO+lp(0.35));float n2=fbm(dir*uScale*5.0+SO*1.3-lp(0.25));",
+          " float beams=smoothstep(-0.3,0.8,n*0.8+n2*0.4);float wr=r+fbm(uv*1.5+SO+lp(0.3))*uWarp*0.2;",
+          " float t=exp(-wr*mix(2.6,1.1,uSoft))*(0.35+0.9*beams)+0.3*exp(-r*r*18.0);return ramp(t);}",
+          "void main(){",
+          " SO=vec2(sin(uSeed*1.3),cos(uSeed*1.7))*40.0;",
+          " float unit=min(uRes.x,uRes.y)/1080.0;float px=max(1.0,floor(uPixel*unit+0.5));",
+          " vec2 fc=gl_FragCoord.xy;if(uDither>0.5)fc=(floor(fc/px)+0.5)*px;",
+          " vec2 uv=(fc-0.5*uRes)/min(uRes.x,uRes.y);float ca=cos(uAngle),sa=sin(uAngle);uv=mat2(ca,-sa,sa,ca)*uv;",
+          " vec3 lab;if(uMode==0)lab=mesh(uv);else if(uMode==1)lab=flow(uv);else if(uMode==2)lab=silk(uv);else lab=rays(uv);",
+          " vec3 col=oklab2srgb(lab);",
+          " col+=uBright;col=(col-0.5)*uContrast+0.5;float lum=dot(col,vec3(0.2126,0.7152,0.0722));col=mix(vec3(lum),col,uSat);",
+          " vec2 vu=(gl_FragCoord.xy-0.5*uRes)/max(uRes.x,uRes.y);col*=1.0-uVignette*smoothstep(0.15,0.75,length(vu)*1.4);",
+          " float gs=max(1.0,uGrainSize*unit);vec2 gp=floor(gl_FragCoord.xy/gs);float gt=uGrainAnim>0.5?floor(uPhase*240.0):0.0;",
+          " float g=hash12(gp+gt*17.13)+hash12(gp*1.37+11.1+gt*3.7)-1.0;col+=g*uGrain*0.5;",
+          " if(uDither>0.5){float L=uLevels-1.0;col=floor(clamp(col,0.0,1.0)*L+bayer8(floor(gl_FragCoord.xy/px)))/L;}",
+          " gl_FragColor=vec4(clamp(col,0.0,1.0),1.0);}",
+        ].join("\n");
+        var VS = "attribute vec2 p;void main(){gl_Position=vec4(p,0.0,1.0);}";
+
+        function srgbToOklab(hex) {
+          var n = parseInt(hex.slice(1), 16),
+            c = [((n >> 16) & 255) / 255, ((n >> 8) & 255) / 255, (n & 255) / 255].map(function (v) {
+              return v <= 0.04045 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
+            });
+          var l = Math.cbrt(0.4122214708 * c[0] + 0.5363325363 * c[1] + 0.0514459929 * c[2]),
+            m = Math.cbrt(0.2119034982 * c[0] + 0.6806995451 * c[1] + 0.1073969566 * c[2]),
+            s = Math.cbrt(0.0883024619 * c[0] + 0.2817188376 * c[1] + 0.6299787005 * c[2]);
+          return [
+            0.2104542553 * l + 0.793617785 * m - 0.0040720468 * s,
+            1.9779984951 * l - 2.428592205 * m + 0.4505937099 * s,
+            0.0259040371 * l + 0.7827717662 * m - 0.808675766 * s,
+          ];
+        }
+
+        function create(canvas) {
+          var gl = canvas.getContext("webgl", {
+            preserveDrawingBuffer: true,
+            antialias: false,
+            alpha: false,
+            premultipliedAlpha: false,
+          });
+          if (!gl) return null;
+          function sh(t, src) {
+            var s = gl.createShader(t);
+            gl.shaderSource(s, src);
+            gl.compileShader(s);
+            if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(s));
+            return s;
+          }
+          var pr = gl.createProgram();
+          gl.attachShader(pr, sh(gl.VERTEX_SHADER, VS));
+          gl.attachShader(pr, sh(gl.FRAGMENT_SHADER, FS));
+          gl.linkProgram(pr);
+          if (!gl.getProgramParameter(pr, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(pr));
+          gl.useProgram(pr);
+          var b = gl.createBuffer();
+          gl.bindBuffer(gl.ARRAY_BUFFER, b);
+          gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
+          var loc = gl.getAttribLocation(pr, "p");
+          gl.enableVertexAttribArray(loc);
+          gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
+          var U = {};
+          [
+            "uRes",
+            "uPhase",
+            "uMode",
+            "uCount",
+            "uCol",
+            "uPts",
+            "uFocus",
+            "uSeed",
+            "uScale",
+            "uWarp",
+            "uSoft",
+            "uAngle",
+            "uMotion",
+            "uGrain",
+            "uGrainSize",
+            "uGrainAnim",
+            "uDither",
+            "uLevels",
+            "uPixel",
+            "uContrast",
+            "uSat",
+            "uBright",
+            "uVignette",
+          ].forEach(function (k) {
+            U[k] = gl.getUniformLocation(pr, k);
+          });
+          var labCache = {};
+          function lab(hex) {
+            return labCache[hex] || (labCache[hex] = srgbToOklab(hex));
+          }
+          function render(s, phase) {
+            var w = canvas.width,
+              h = canvas.height;
+            gl.viewport(0, 0, w, h);
+            var cols = [],
+              pts = [],
+              i;
+            for (i = 0; i < 5; i++) {
+              var c = lab(s.colors[Math.min(i, s.colors.length - 1)]);
+              cols.push(c[0], c[1], c[2]);
+              var p = s.points[i] || [0, 0];
+              pts.push(p[0], p[1]);
+            }
+            gl.uniform2f(U.uRes, w, h);
+            gl.uniform1f(U.uPhase, phase);
+            gl.uniform1i(U.uMode, s.mode);
+            gl.uniform1i(U.uCount, Math.max(2, Math.min(5, s.colors.length)));
+            gl.uniform3fv(U.uCol, cols);
+            gl.uniform2fv(U.uPts, pts);
+            gl.uniform2f(U.uFocus, s.focus[0], s.focus[1]);
+            gl.uniform1f(U.uSeed, s.seed);
+            gl.uniform1f(U.uScale, s.scale);
+            gl.uniform1f(U.uWarp, s.warp);
+            gl.uniform1f(U.uSoft, s.soft);
+            gl.uniform1f(U.uAngle, (s.angle * Math.PI) / 180);
+            gl.uniform1f(U.uMotion, s.motion);
+            gl.uniform1f(U.uGrain, s.grain);
+            gl.uniform1f(U.uGrainSize, s.grainSize);
+            gl.uniform1f(U.uGrainAnim, s.grainAnim ? 1 : 0);
+            gl.uniform1f(U.uDither, s.dither ? 1 : 0);
+            gl.uniform1f(U.uLevels, s.levels);
+            gl.uniform1f(U.uPixel, s.pixel);
+            gl.uniform1f(U.uContrast, s.contrast);
+            gl.uniform1f(U.uSat, s.sat);
+            gl.uniform1f(U.uBright, s.bright);
+            gl.uniform1f(U.uVignette, s.vignette);
+            gl.drawArrays(gl.TRIANGLES, 0, 3);
+          }
+          return { gl: gl, render: render };
+        }
+
+        // Drop-in live background: sizes itself, loops, pauses off-screen, respects reduced motion.
+        function mount(canvas, state, id) {
+          var r = create(canvas);
+          if (!r) return;
+          canvas.setAttribute("data-gr4dient", id || SIG);
+          var still = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
+          var loop = ((state.bars || 4) * 240) / (state.bpm || 129),
+            t0 = performance.now(),
+            visible = true;
+          function size() {
+            var d = Math.min(window.devicePixelRatio || 1, 1.5);
+            canvas.width = Math.max(1, Math.round(canvas.clientWidth * d));
+            canvas.height = Math.max(1, Math.round(canvas.clientHeight * d));
+          }
+          size();
+          if (window.ResizeObserver)
+            new ResizeObserver(function () {
+              size();
+              if (still || !state.animate) r.render(state, 0);
+            }).observe(canvas);
+          if (window.IntersectionObserver)
+            new IntersectionObserver(function (e) {
+              visible = e[0].isIntersecting;
+            }).observe(canvas);
+          if (still || !state.animate) {
+            r.render(state, 0);
+            return;
+          }
+          (function tick(now) {
+            if (visible) r.render(state, ((now - t0) / 1000 / loop) % 1);
+            requestAnimationFrame(tick);
+          })(t0);
+        }
+        root.R352Gr4dient = { create: create, mount: mount, srgbToOklab: srgbToOklab, sig: SIG };
+      })(window);
+    </script>
+
+    <script>
+      (function () {
+        "use strict";
+        var $ = function (s) {
+          return document.querySelector(s);
+        };
+        var TXT = {
+          en: {
+            random: "Randomize",
+            pause: "Pause",
+            play: "Play",
+            title: "Animated gradient generator",
+            tagline: "Gradients that move on the beat. Set the tempo, every loop lands on the bar.",
+            mode: "Mode",
+            m0: "Field",
+            m1: "Current",
+            m2: "Fold",
+            m3: "Beam",
+            presets: "Moves",
+            colors: "Colors",
+            colorsHint: "click to edit",
+            add: "Add",
+            remove: "Remove",
+            reverse: "Reverse",
+            shuffle: "Shuffle",
+            shape: "Shape",
+            newSeed: "New seed",
+            motion: "Motion",
+            texture: "Texture",
+            finish: "Finish",
+            export: "Export",
+            png: "Save PNG",
+            video: "Record loop",
+            code: "Code",
+            link: "Link",
+            exportNote:
+              "Video renders the loop frame by frame on your tempo (MP4, 60 fps), so it cuts cleanly on the bar.",
+            about: "About",
+            about1:
+              "gr4dient is a free gradient generator that runs in your browser. Build mesh gradients from up to five colours, switch to flowing, folded or light-beam modes, add grain or dither, and export a PNG or a looping MP4 for backgrounds, slides, social posts and websites.",
+            about2:
+              "Motion is tied to tempo: set the BPM and the number of bars, and the loop ends exactly on the bar, so it cuts cleanly to music. No sign-up, nothing is uploaded, the link keeps your settings.",
+            scale: "Scale",
+            warp: "Warp",
+            soft: "Softness",
+            angle: "Rotation",
+            animate: "Animate",
+            bpm: "Tempo",
+            bars: "Bars per loop",
+            motionAmt: "Movement",
+            grain: "Grain",
+            grainSize: "Grain size",
+            grainAnim: "Living grain",
+            dither: "Dither",
+            levels: "Dither levels",
+            pixel: "Dither pixel",
+            contrast: "Contrast",
+            sat: "Saturation",
+            bright: "Brightness",
+            vignette: "Vignette",
+            copied: "Copied to clipboard",
+            cssCopied: "CSS copied. Static approximation with grain.",
+            codeCopied: "Embed code copied. Paste it anywhere.",
+            linkCopied: "Link copied",
+            saved: "Saved",
+            recording: "Recording",
+            tooBig: "This GPU renders at most",
+            dragHint: "Drag the dots to move colors",
+          },
+          pl: {
+            random: "Losuj",
+            pause: "Pauza",
+            play: "Odtwórz",
+            title: "Generator gradientów w ruchu",
+            tagline: "Gradienty, które ruszają się w takcie. Ustaw tempo, każda pętla kończy się na takcie.",
+            mode: "Tryb",
+            m0: "Pole",
+            m1: "Nurt",
+            m2: "Fałda",
+            m3: "Wiązka",
+            presets: "Figury",
+            colors: "Kolory",
+            colorsHint: "kliknij, żeby zmienić",
+            add: "Dodaj",
+            remove: "Usuń",
+            reverse: "Odwróć",
+            shuffle: "Tasuj",
+            shape: "Kształt",
+            newSeed: "Nowe ziarno",
+            motion: "Ruch",
+            texture: "Faktura",
+            finish: "Wykończenie",
+            export: "Eksport",
+            png: "Zapisz PNG",
+            video: "Nagraj pętlę",
+            code: "Kod",
+            link: "Link",
+            exportNote:
+              "Wideo renderuje pętlę klatka po klatce w Twoim tempie (MP4, 60 kl./s), więc tnie się równo na takcie.",
+            about: "O narzędziu",
+            about1:
+              "gr4dient to darmowy generator gradientów w przeglądarce. Zbudujesz gradient siatkowy z maksymalnie pięciu kolorów, przełączysz go w nurt, fałdę albo wiązkę światła, dodasz ziarno lub dithering i pobierzesz PNG albo zapętlone MP4 na tła, slajdy, posty i strony.",
+            about2:
+              "Ruch jest związany z tempem: ustawiasz BPM i liczbę taktów, a pętla kończy się dokładnie na takcie, więc równo tnie się pod muzykę. Bez rejestracji, nic nie jest wysyłane, link zapamiętuje ustawienia.",
+            scale: "Skala",
+            warp: "Zawirowanie",
+            soft: "Miękkość",
+            angle: "Obrót",
+            animate: "Animacja",
+            bpm: "Tempo",
+            bars: "Takty w pętli",
+            motionAmt: "Ruchliwość",
+            grain: "Ziarno",
+            grainSize: "Wielkość ziarna",
+            grainAnim: "Żywe ziarno",
+            dither: "Dithering",
+            levels: "Poziomy ditheringu",
+            pixel: "Piksel ditheringu",
+            contrast: "Kontrast",
+            sat: "Nasycenie",
+            bright: "Jasność",
+            vignette: "Winieta",
+            copied: "Skopiowane",
+            cssCopied: "CSS skopiowany. Statyczne przybliżenie z ziarnem.",
+            codeCopied: "Kod skopiowany. Wklej go na dowolną stronę.",
+            linkCopied: "Link skopiowany",
+            saved: "Zapisane",
+            recording: "Nagrywam",
+            tooBig: "Ta karta graficzna renderuje maksymalnie",
+            dragHint: "Przeciągnij kropki, żeby przesunąć kolory",
+          },
+        };
+        var lang = (localGet("r352gr4dient.lang") || (navigator.language || "en").slice(0, 2)) === "pl" ? "pl" : "en";
+        function t(k) {
+          return TXT[lang][k] || TXT.en[k] || k;
+        }
+        function localGet(k) {
+          try {
+            return localStorage.getItem(k);
+          } catch {
+            return null;
+          }
+        }
+        function localSet(k, v) {
+          try {
+            localStorage.setItem(k, v);
+          } catch {}
+        }
+
+        var PTS = [
+          [-0.45, 0.28],
+          [0.42, 0.32],
+          [0.08, -0.06],
+          [-0.36, -0.34],
+          [0.5, -0.3],
+        ];
+        var BASE = {
+          mode: 0,
+          colors: ["#0B0B0B", "#D4FF00", "#2F5A00", "#151515", "#E8FF8A"],
+          seed: 3.1,
+          scale: 1.1,
+          warp: 0.7,
+          soft: 0.55,
+          angle: 0,
+          animate: true,
+          bpm: 129,
+          bars: 4,
+          motion: 0.8,
+          grain: 0.14,
+          grainSize: 1.4,
+          grainAnim: true,
+          dither: false,
+          levels: 4,
+          pixel: 3,
+          contrast: 1,
+          sat: 1,
+          bright: 0,
+          vignette: 0.25,
+          points: PTS.map(function (p) {
+            return p.slice();
+          }),
+          focus: [-0.1, 0.62],
+        };
+        function P(name, o) {
+          var s = JSON.parse(JSON.stringify(BASE));
+          for (var k in o) s[k] = o[k];
+          s.name = name;
+          return s;
+        }
+        var PRESETS = [
+          P("Toprock", {}),
+          P("Windmill", {
+            mode: 1,
+            colors: ["#120A08", "#5B2A3A", "#D97757", "#F2C6A0", "#FFF1E4"],
+            seed: 7.4,
+            scale: 0.9,
+            warp: 0.8,
+            grain: 0.16,
+          }),
+          P("Headspin", {
+            mode: 3,
+            colors: ["#030306", "#141A3D", "#4B3BFF", "#B8A8FF", "#FFFFFF"],
+            seed: 2.2,
+            scale: 1.2,
+            warp: 0.5,
+            soft: 0.45,
+            grain: 0.18,
+            focus: [-0.2, 0.7],
+          }),
+          P("129 BPM", {
+            mode: 1,
+            colors: ["#03101A", "#0B3F46", "#1FD39A", "#D4FF00", "#F5FFE8"],
+            seed: 12.9,
+            scale: 0.7,
+            warp: 1.0,
+            soft: 0.7,
+            grain: 0.12,
+          }),
+          P("Freeze", {
+            mode: 2,
+            colors: ["#050508", "#161A30", "#3244C9", "#A3AEFF"],
+            seed: 5.5,
+            scale: 0.9,
+            warp: 0.9,
+            soft: 0.35,
+            grain: 0.1,
+            vignette: 0.4,
+          }),
+          P("Uprock", {
+            mode: 0,
+            colors: ["#FFE6D6", "#FF9A7A", "#FFC4DD", "#FFF6EC", "#FF6F61"],
+            seed: 9.9,
+            warp: 0.9,
+            soft: 0.75,
+            grain: 0.1,
+            vignette: 0,
+            points: [
+              [-0.5, 0.3],
+              [0.45, 0.25],
+              [0.0, -0.05],
+              [-0.3, -0.35],
+              [0.5, -0.32],
+            ],
+          }),
+          P("Airflare", {
+            mode: 2,
+            colors: ["#070707", "#1A1A1A", "#00D9B0", "#D4FF00"],
+            seed: 1.7,
+            scale: 1.1,
+            warp: 1.2,
+            soft: 0.3,
+            grain: 0.12,
+          }),
+          P("Six Step", {
+            mode: 0,
+            colors: ["#020A18", "#06306B", "#0F7BD8", "#53E0FF", "#E6FBFF"],
+            seed: 4.4,
+            warp: 1.0,
+            soft: 0.5,
+            grain: 0.16,
+            points: [
+              [-0.55, -0.3],
+              [-0.1, 0.35],
+              [0.35, -0.15],
+              [0.55, 0.35],
+              [0.1, -0.45],
+            ],
+          }),
+          P("Flare", {
+            mode: 3,
+            colors: ["#080201", "#4A0E00", "#FF4D00", "#FFB000", "#FFF4D6"],
+            seed: 6.6,
+            scale: 0.9,
+            warp: 0.7,
+            soft: 0.55,
+            grain: 0.2,
+            focus: [0.25, 0.55],
+          }),
+          P("Cassette", {
+            mode: 1,
+            colors: ["#0A1D18", "#2E8B6B", "#A8F0C8", "#F4FFF8"],
+            seed: 8.1,
+            scale: 1.0,
+            warp: 0.9,
+            grain: 0.05,
+            dither: true,
+            levels: 4,
+            pixel: 3,
+            vignette: 0.1,
+          }),
+          P("Popping", {
+            mode: 2,
+            colors: ["#3A0CA3", "#FF5CA8", "#FFB3D9", "#FFE8F4"],
+            seed: 11.1,
+            scale: 0.8,
+            warp: 1.0,
+            soft: 0.55,
+            grain: 0.08,
+            vignette: 0,
+          }),
+          P("Cypher", {
+            mode: 0,
+            colors: ["#0A0A0A", "#2A2A2A", "#6E6E6E", "#C9C9C9", "#151515"],
+            seed: 2.9,
+            warp: 1.1,
+            soft: 0.6,
+            grain: 0.2,
+            sat: 0,
+          }),
+          P("Soundcheck", {
+            mode: 0,
+            colors: ["#F1F6FA", "#C7DDFF", "#FFE3B8", "#D8CCFF", "#FFFFFF"],
+            seed: 13.3,
+            warp: 0.8,
+            soft: 0.8,
+            grain: 0.07,
+            vignette: 0,
+          }),
+          P("Scratch", {
+            mode: 3,
+            colors: ["#0A0A0A", "#3B1A10", "#D97757", "#FFE2CC"],
+            seed: 3.3,
+            scale: 1.1,
+            warp: 0.6,
+            grain: 0.03,
+            dither: true,
+            levels: 3,
+            pixel: 4,
+            focus: [0, 0.75],
+            vignette: 0,
+          }),
+        ];
+
+        var S = loadHash() || JSON.parse(JSON.stringify(PRESETS[0]));
+        var activePreset = S.name || null;
+        var reduced = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
+        if (reduced) S.animate = false;
+
+        // ---------- renderer ----------
+        var canvas = $("#stage"),
+          R = R352Gr4dient.create(canvas);
+        if (!R) {
+          document.body.innerHTML =
+            '<p style="padding:40px;font:16px sans-serif;color:#fff">WebGL is not available in this browser.</p>';
+          return;
+        }
+        var phase = 0,
+          last = performance.now(),
+          playing = S.animate,
+          frames = 0,
+          fpsT = last,
+          recording = false;
+        function loopLen() {
+          return ((S.bars || 4) * 240) / (S.bpm || 129);
+        }
+        function resize() {
+          var d = Math.min(window.devicePixelRatio || 1, 1.5);
+          canvas.width = Math.round(innerWidth * d);
+          canvas.height = Math.round(innerHeight * d);
+          draw();
+          placeHandles();
+        }
+        function draw() {
+          R.render(S, phase);
+        }
+        function tick(now) {
+          var dt = (now - last) / 1000;
+          last = now;
+          if (playing && !recording) {
+            phase = (phase + dt / loopLen()) % 1;
+            draw();
+          }
+          var beats = (S.bars || 4) * 4,
+            b = Math.floor(phase * beats);
+          $("#beat").textContent = Math.floor(b / 4) + 1 + "." + ((b % 4) + 1);
+          $("#bpm").textContent = Math.round(S.bpm || 129) + " BPM";
+          $("#led").classList.toggle("off", !playing);
+          syncLoop();
+          frames++;
+          if (now - fpsT > 1000) {
+            $("#fps").textContent = Math.round((frames * 1000) / (now - fpsT)) + " fps";
+            frames = 0;
+            fpsT = now;
+          }
+          requestAnimationFrame(tick);
+        }
+        addEventListener("resize", resize);
+
+        // ---------- controls ----------
+        var SLIDERS = {
+          slShape: [
+            { k: "scale", min: 0.3, max: 3, step: 0.01 },
+            { k: "warp", min: 0, max: 2, step: 0.01 },
+            { k: "soft", min: 0, max: 1, step: 0.01 },
+            { k: "angle", min: 0, max: 360, step: 1, unit: "°" },
+          ],
+          slMotion: [
+            { k: "animate", toggle: 1 },
+            { k: "bpm", min: 60, max: 180, step: 1, unit: "bpm" },
+            { k: "bars", min: 1, max: 8, step: 1 },
+            { k: "motionAmt", key: "motion", min: 0, max: 2, step: 0.01 },
+          ],
+          slTexture: [
+            { k: "grain", min: 0, max: 0.6, step: 0.005 },
+            { k: "grainSize", min: 1, max: 6, step: 0.1 },
+            { k: "grainAnim", toggle: 1 },
+            { k: "dither", toggle: 1 },
+            { k: "levels", min: 2, max: 8, step: 1, dep: "dither" },
+            { k: "pixel", min: 1, max: 12, step: 1, dep: "dither" },
+          ],
+          slFinish: [
+            { k: "contrast", min: 0.5, max: 1.6, step: 0.01 },
+            { k: "sat", min: 0, max: 1.8, step: 0.01 },
+            { k: "bright", min: -0.3, max: 0.3, step: 0.005 },
+            { k: "vignette", min: 0, max: 1, step: 0.01 },
+          ],
+        };
+        var inputs = {};
+        function fmt(d, v) {
+          if (d.unit === "°") return Math.round(v) + "°";
+          if (d.unit === "bpm") return Math.round(v) + " BPM";
+          if (d.step >= 1) return String(Math.round(v));
+          return (+v).toFixed(2);
+        }
+        function setFill(el) {
+          var p = ((el.value - el.min) / (el.max - el.min)) * 100;
+          el.style.setProperty("--p", p + "%");
+        }
+        function buildSliders() {
+          Object.keys(SLIDERS).forEach(function (id) {
+            var box = document.getElementById(id);
+            box.innerHTML = "";
+            SLIDERS[id].forEach(function (d) {
+              var key = d.key || d.k;
+              if (d.toggle) {
+                var row = document.createElement("div");
+                row.className = "tg";
+                row.innerHTML =
+                  '<span data-i18n="' +
+                  d.k +
+                  '">' +
+                  t(d.k) +
+                  '</span><button class="sw-btn" role="switch" aria-label="' +
+                  t(d.k) +
+                  '"></button>';
+                var btn = row.querySelector("button");
+                btn.onclick = function () {
+                  S[key] = !S[key];
+                  if (key === "animate") {
+                    playing = S.animate;
+                    syncPlay();
+                  }
+                  commit();
+                  syncControls();
+                };
+                inputs[key] = { el: btn, d: d };
+                box.appendChild(row);
+                return;
+              }
+              var w = document.createElement("div");
+              w.className = "sl";
+              w.dataset.dep = d.dep || "";
+              w.innerHTML =
+                '<label data-i18n="' +
+                d.k +
+                '">' +
+                t(d.k) +
+                '</label><output></output><input type="range" min="' +
+                d.min +
+                '" max="' +
+                d.max +
+                '" step="' +
+                d.step +
+                '" aria-label="' +
+                t(d.k) +
+                '">';
+              var el = w.querySelector("input"),
+                out = w.querySelector("output");
+              el.oninput = function () {
+                S[key] = +el.value;
+                out.textContent = fmt(d, el.value);
+                setFill(el);
+                activePreset = null;
+                markPreset();
+                if (!playing) draw();
+                placeHandles();
+                commitSoon();
+              };
+              el.ondblclick = function () {
+                el.value = BASE[key];
+                el.oninput();
+              };
+              inputs[key] = { el: el, out: out, d: d, wrap: w };
+              box.appendChild(w);
+            });
+          });
+        }
+        function syncControls() {
+          Object.keys(inputs).forEach(function (k) {
+            var o = inputs[k];
+            if (o.d.toggle) {
+              o.el.setAttribute("aria-checked", !!S[k]);
+            } else {
+              o.el.value = S[k];
+              o.out.textContent = fmt(o.d, S[k]);
+              setFill(o.el);
+              if (o.wrap.dataset.dep) o.wrap.style.display = S[o.wrap.dataset.dep] ? "" : "none";
+            }
+          });
+          document.querySelectorAll("[data-mode]").forEach(function (b) {
+            b.setAttribute("aria-pressed", +b.dataset.mode === S.mode);
+          });
+          buildSwatches();
+          markPreset();
+          placeHandles();
+        }
+        function buildSwatches() {
+          var box = $("#swatches");
+          box.innerHTML = "";
+          S.colors.forEach(function (c, i) {
+            var sw = document.createElement("label");
+            sw.className = "sw";
+            sw.style.background = c;
+            sw.title = c.toUpperCase();
+            var inp = document.createElement("input");
+            inp.type = "color";
+            inp.value = c;
+            inp.setAttribute("aria-label", "Color " + (i + 1));
+            inp.oninput = function () {
+              S.colors[i] = inp.value;
+              sw.style.background = inp.value;
+              activePreset = null;
+              markPreset();
+              placeHandles();
+              if (!playing) draw();
+              commitSoon();
+            };
+            sw.appendChild(inp);
+            box.appendChild(sw);
+          });
+          $("#colAdd").disabled = S.colors.length >= 5;
+          $("#colDel").disabled = S.colors.length <= 2;
+        }
+        function commit() {
+          activePreset = null;
+          markPreset();
+          if (!playing) draw();
+          saveHash();
+        }
+        var cT;
+        function commitSoon() {
+          clearTimeout(cT);
+          cT = setTimeout(saveHash, 250);
+        }
+
+        document.querySelectorAll("[data-mode]").forEach(function (b) {
+          b.onclick = function () {
+            S.mode = +b.dataset.mode;
+            commit();
+            syncControls();
+          };
+        });
+        $("#colAdd").onclick = function () {
+          if (S.colors.length < 5) {
+            S.colors.push(randomColor());
+            commit();
+            syncControls();
+          }
+        };
+        $("#colDel").onclick = function () {
+          if (S.colors.length > 2) {
+            S.colors.pop();
+            commit();
+            syncControls();
+          }
+        };
+        $("#colRev").onclick = function () {
+          S.colors.reverse();
+          commit();
+          syncControls();
+        };
+        $("#colShuf").onclick = function () {
+          shuffle(S.colors);
+          commit();
+          syncControls();
+        };
+        $("#btnSeed").onclick = function () {
+          S.seed = +(Math.random() * 20).toFixed(2);
+          commit();
+        };
+
+        // ---------- presets with rendered thumbnails ----------
+        function buildPresets() {
+          var tc = document.createElement("canvas");
+          tc.width = 184;
+          tc.height = 124;
+          var tr = R352Gr4dient.create(tc);
+          var box = $("#presets");
+          box.innerHTML = "";
+          PRESETS.forEach(function (p) {
+            var b = document.createElement("button");
+            b.className = "preset";
+            b.dataset.name = p.name;
+            var i = document.createElement("i");
+            if (tr) {
+              var q = JSON.parse(JSON.stringify(p));
+              q.grainSize = Math.max(1, q.grainSize * 0.6);
+              tr.render(q, 0.1);
+              i.style.backgroundImage = "url(" + tc.toDataURL("image/jpeg", 0.85) + ")";
+            }
+            var s = document.createElement("span");
+            s.textContent = p.name;
+            b.appendChild(i);
+            b.appendChild(s);
+            b.onclick = function () {
+              S = JSON.parse(JSON.stringify(p));
+              if (reduced) S.animate = false;
+              playing = S.animate;
+              syncPlay();
+              activePreset = p.name;
+              syncControls();
+              draw();
+              saveHash();
+            };
+            box.appendChild(b);
+          });
+          $("#presetCount").textContent = PRESETS.length;
+          if (tr) {
+            var ext = tr.gl.getExtension("WEBGL_lose_context");
+            if (ext) ext.loseContext();
+          }
+        }
+        function markPreset() {
+          document.querySelectorAll(".preset").forEach(function (b) {
+            b.setAttribute("aria-pressed", b.dataset.name === activePreset);
+          });
+        }
+
+        // ---------- draggable colour points / light focus ----------
+        var hbox = $("#handles");
+        function toScreen(p) {
+          var m = Math.min(innerWidth, innerHeight),
+            a = (S.angle * Math.PI) / 180,
+            c = Math.cos(a),
+            s = Math.sin(a);
+          var x = c * p[0] - s * p[1],
+            y = s * p[0] + c * p[1];
+          return [x * m + innerWidth / 2, innerHeight / 2 - y * m];
+        }
+        function fromScreen(x, y) {
+          var m = Math.min(innerWidth, innerHeight),
+            a = (S.angle * Math.PI) / 180,
+            c = Math.cos(a),
+            s = Math.sin(a);
+          var ux = (x - innerWidth / 2) / m,
+            uy = (innerHeight / 2 - y) / m;
+          return [c * ux + s * uy, -s * ux + c * uy];
+        }
+        function placeHandles() {
+          var list =
+            S.mode === 0
+              ? S.colors.map(function (c, i) {
+                  return { i: i, c: c, p: S.points[i] };
+                })
+              : S.mode === 3
+                ? [{ i: "f", p: S.focus }]
+                : [];
+          if (hbox.children.length !== list.length || hbox.dataset.mode != String(S.mode)) {
+            hbox.innerHTML = "";
+            hbox.dataset.mode = S.mode;
+            list.forEach(function (it) {
+              var h = document.createElement("div");
+              h.className = "handle" + (it.i === "f" ? " focus" : "");
+              h.dataset.i = it.i;
+              h.title = t("dragHint");
+              hbox.appendChild(h);
+              drag(h);
+            });
+          }
+          list.forEach(function (it, k) {
+            var h = hbox.children[k],
+              q = toScreen(it.p);
+            h.style.left = q[0] + "px";
+            h.style.top = q[1] + "px";
+            if (it.c) h.style.setProperty("--c", it.c);
+          });
+        }
+        function drag(h) {
+          h.addEventListener("pointerdown", function (e) {
+            e.preventDefault();
+            h.setPointerCapture(e.pointerId);
+            h.classList.add("drag");
+            function mv(ev) {
+              var p = fromScreen(ev.clientX, ev.clientY);
+              if (h.dataset.i === "f") S.focus = p;
+              else S.points[+h.dataset.i] = p;
+              activePreset = null;
+              markPreset();
+              placeHandles();
+              if (!playing) draw();
+            }
+            function up() {
+              h.classList.remove("drag");
+              h.removeEventListener("pointermove", mv);
+              h.removeEventListener("pointerup", up);
+              h.removeEventListener("pointercancel", up);
+              saveHash();
+            }
+            h.addEventListener("pointermove", mv);
+            h.addEventListener("pointerup", up);
+            h.addEventListener("pointercancel", up);
+          });
+        }
+
+        // ---------- randomize ----------
+        function hsl(h, s, l) {
+          h = ((h % 360) + 360) % 360;
+          s /= 100;
+          l /= 100;
+          var k = function (n) {
+              return (n + h / 30) % 12;
+            },
+            a = s * Math.min(l, 1 - l),
+            f = function (n) {
+              return l - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1)));
+            };
+          return (
+            "#" +
+            [f(0), f(8), f(4)]
+              .map(function (x) {
+                return Math.round(x * 255)
+                  .toString(16)
+                  .padStart(2, "0");
+              })
+              .join("")
+          );
+        }
+        function rnd(a, b) {
+          return a + Math.random() * (b - a);
+        }
+        function shuffle(a) {
+          for (var i = a.length - 1; i > 0; i--) {
+            var j = Math.floor(Math.random() * (i + 1)),
+              x = a[i];
+            a[i] = a[j];
+            a[j] = x;
+          }
+          return a;
+        }
+        function randomColor() {
+          return hsl(rnd(0, 360), rnd(50, 95), rnd(30, 80));
+        }
+        function randomPalette() {
+          var h = rnd(0, 360),
+            scheme = ["analog", "complement", "triad", "split"][Math.floor(Math.random() * 4)],
+            dark = Math.random() < 0.62,
+            n = Math.random() < 0.7 ? 5 : 4;
+          var off = {
+            analog: [0, 25, -25, 45, -45],
+            complement: [0, 180, 20, 200, -15],
+            triad: [0, 120, 240, 30, 150],
+            split: [0, 150, 210, 20, -20],
+          }[scheme];
+          var cols = [];
+          for (var i = 0; i < n; i++) {
+            var L = dark ? (i === 0 ? rnd(3, 9) : rnd(25, 85)) : i === 0 ? rnd(88, 96) : rnd(55, 90);
+            var Sat = i === 0 ? rnd(10, 45) : rnd(55, 100);
+            cols.push({ c: hsl(h + off[i] + rnd(-8, 8), Sat, L), L: L });
+          }
+          if (Math.random() < 0.5) {
+            var top = cols.slice(1).sort(function (a, b) {
+              return a.L - b.L;
+            });
+            cols = [cols[0]].concat(top);
+          }
+          return cols.map(function (x) {
+            return x.c;
+          });
+        }
+        function randomize() {
+          var keepMode = S.mode;
+          S.colors = randomPalette();
+          S.seed = +rnd(0, 20).toFixed(2);
+          S.scale = +rnd(0.6, 1.6).toFixed(2);
+          S.warp = +rnd(0.3, 1.3).toFixed(2);
+          S.soft = +rnd(0.3, 0.85).toFixed(2);
+          S.grain = +rnd(0.06, 0.22).toFixed(3);
+          S.points = S.points.map(function () {
+            return [+rnd(-0.6, 0.6).toFixed(3), +rnd(-0.42, 0.42).toFixed(3)];
+          });
+          S.focus = [+rnd(-0.4, 0.4).toFixed(3), +rnd(0.3, 0.75).toFixed(3)];
+          S.mode = keepMode;
+          activePreset = null;
+          syncControls();
+          draw();
+          saveHash();
+        }
+        $("#btnRandom").onclick = randomize;
+
+        // ---------- play / UI ----------
+        function syncPlay() {
+          $("#lblPlay").textContent = t(playing ? "pause" : "play");
+          $("#icoPlay").innerHTML = playing ? '<path d="M7 5h3v14H7zM14 5h3v14h-3z"/>' : '<path d="M8 5v14l11-7z"/>';
+        }
+        $("#btnPlay").onclick = function () {
+          playing = !playing;
+          S.animate = playing;
+          syncPlay();
+          syncControls();
+          saveHash();
+        };
+        $("#btnUi").onclick = function () {
+          document.body.classList.toggle("ui-off");
+        };
+        $("#grip").onclick = function () {
+          $("#panel").classList.toggle("min");
+        };
+        addEventListener("keydown", function (e) {
+          if (e.target.matches("input,select,textarea") || e.metaKey || e.ctrlKey || e.altKey) return;
+          if (e.key === "r" || e.key === "R") randomize();
+          else if (e.key === " ") {
+            e.preventDefault();
+            $("#btnPlay").click();
+          } else if (e.key === "h" || e.key === "H") $("#btnUi").click();
+          else if (e.key === "s" || e.key === "S") $("#btnPng").click();
+        });
+
+        // ---------- language ----------
+        function applyLang() {
+          document.documentElement.lang = lang;
+          document.querySelectorAll("[data-i18n]").forEach(function (el) {
+            el.textContent = t(el.dataset.i18n);
+          });
+          document.querySelectorAll("[data-i18n-ph]").forEach(function (el) {
+            el.placeholder = t(el.dataset.i18nPh);
+          });
+          document.querySelectorAll(".lang button").forEach(function (b) {
+            b.setAttribute("aria-pressed", b.dataset.lang === lang);
+          });
+          syncPlay();
+          if (!recording) $("#lblVideo").textContent = t("video");
+        }
+        document.querySelectorAll(".lang button").forEach(function (b) {
+          b.onclick = function () {
+            lang = b.dataset.lang;
+            localSet("r352gr4dient.lang", lang);
+            applyLang();
+          };
+        });
+
+        // ---------- share state in the URL ----------
+        function saveHash() {
+          try {
+            var s = JSON.stringify(S);
+            history.replaceState(null, "", "#g=" + btoa(unescape(encodeURIComponent(s))));
+          } catch {}
+        }
+        function loadHash() {
+          try {
+            var m = location.hash.match(/#g=(.+)/);
+            if (!m) return null;
+            var o = JSON.parse(decodeURIComponent(escape(atob(m[1]))));
+            var s = JSON.parse(JSON.stringify(BASE));
+            for (var k in o) s[k] = o[k];
+            return s;
+          } catch {
+            return null;
+          }
+        }
+
+        // ---------- export ----------
+        var exCanvas = null,
+          exR = null;
+        function exportSize() {
+          var a = $("#selAspect").value,
+            long = +$("#selSize").value,
+            rw,
+            rh;
+          if (a === "screen") {
+            rw = innerWidth;
+            rh = innerHeight;
+          } else {
+            var p = a.split(":");
+            rw = +p[0];
+            rh = +p[1];
+          }
+          return rw >= rh ? [long, Math.round((long * rh) / rw)] : [Math.round((long * rw) / rh), long];
+        }
+        function exportRenderer(w, h) {
+          if (!exCanvas) {
+            exCanvas = document.createElement("canvas");
+            exCanvas.style.cssText = "position:fixed;left:-99999px;top:0;width:10px;height:10px;pointer-events:none";
+            document.body.appendChild(exCanvas);
+            exR = R352Gr4dient.create(exCanvas);
+          }
+          exCanvas.width = w;
+          exCanvas.height = h;
+          return exR;
+        }
+        // handles and points live in viewport space; remap them so an export in another aspect keeps the same composition
+        function exportState() {
+          return JSON.parse(JSON.stringify(S));
+        }
+        function stamp() {
+          var d = new Date();
+          return (
+            d.getFullYear() +
+            String(d.getMonth() + 1).padStart(2, "0") +
+            String(d.getDate()).padStart(2, "0") +
+            "-" +
+            String(d.getHours()).padStart(2, "0") +
+            String(d.getMinutes()).padStart(2, "0") +
+            String(d.getSeconds()).padStart(2, "0")
+          );
+        }
+        function download(blob, name) {
+          var a = document.createElement("a");
+          a.href = URL.createObjectURL(blob);
+          a.download = name;
+          document.body.appendChild(a);
+          a.click();
+          setTimeout(function () {
+            URL.revokeObjectURL(a.href);
+            a.remove();
+          }, 1500);
+        }
+        $("#btnPng").onclick = function () {
+          var sz = exportSize(),
+            r = exportRenderer(sz[0], sz[1]);
+          var gw = r.gl.drawingBufferWidth,
+            gh = r.gl.drawingBufferHeight;
+          if (gw < sz[0] || gh < sz[1]) toast(t("tooBig") + " " + gw + "×" + gh);
+          r.render(exportState(), phase);
+          exCanvas.toBlob(function (b) {
+            download(b, "r352-gr4dient-" + gw + "x" + gh + "-" + stamp() + ".png");
+            toast(t("saved") + " · " + gw + "×" + gh);
+          }, "image/png");
+        };
+        function yieldNow() {
+          return new Promise(function (r) {
+            var c = new MessageChannel();
+            c.port1.onmessage = function () {
+              r();
+            };
+            c.port2.postMessage(0);
+          });
+        }
+        function loadScript(src) {
+          return new Promise(function (ok, no) {
+            if (window.Mp4Muxer) return ok();
+            var e = document.createElement("script");
+            e.src = src;
+            e.onload = ok;
+            e.onerror = no;
+            document.head.appendChild(e);
+          });
+        }
+        function videoDone(blob, ext, w, h) {
+          recording = false;
+          $("#btnVideo").classList.remove("lime");
+          $("#lblVideo").textContent = t("video");
+          download(blob, "r352-gr4dient-loop-" + w + "x" + h + "-" + stamp() + "." + ext);
+          toast(t("saved") + " " + w + "×" + h + " ." + ext);
+        }
+        function videoProgress(p) {
+          $("#lblVideo").innerHTML = '<span class="rec-dot"></span> ' + Math.round(p * 100) + "%";
+        }
+        // Frame-exact loop: every frame is rendered at phase i/n and encoded to H.264, independent of screen refresh or tab visibility.
+        async function recordFrames(r, st, w, h, dur) {
+          await loadScript("https://cdn.jsdelivr.net/npm/mp4-muxer@5.1.3/build/mp4-muxer.min.js");
+          var fps = 60,
+            n = Math.round((dur / 1000) * fps),
+            codec = null,
+            cands = ["avc1.640033", "avc1.64002A", "avc1.640028", "avc1.4D0033", "avc1.42E033"];
+          for (var i = 0; i < cands.length && !codec; i++) {
+            try {
+              var q = await VideoEncoder.isConfigSupported({
+                codec: cands[i],
+                width: w,
+                height: h,
+                bitrate: 24e6,
+                framerate: fps,
+              });
+              if (q.supported) codec = cands[i];
+            } catch {}
+          }
+          if (!codec) throw new Error("no avc");
+          var muxer = new Mp4Muxer.Muxer({
+              target: new Mp4Muxer.ArrayBufferTarget(),
+              video: { codec: "avc", width: w, height: h, frameRate: fps },
+              fastStart: "in-memory",
+            }),
+            err = null;
+          var enc = new VideoEncoder({
+            output: function (c, m) {
+              muxer.addVideoChunk(c, m);
+            },
+            error: function (e) {
+              err = e;
+            },
+          });
+          enc.configure({ codec: codec, width: w, height: h, bitrate: w * h >= 3e6 ? 40e6 : 24e6, framerate: fps });
+          for (var f = 0; f < n; f++) {
+            if (err) throw err;
+            r.render(st, f / n);
+            var fr = new VideoFrame(exCanvas, {
+              timestamp: Math.round((f * 1e6) / fps),
+              duration: Math.round(1e6 / fps),
+            });
+            enc.encode(fr, { keyFrame: f % 120 === 0 });
+            fr.close();
+            while (enc.encodeQueueSize > 6) await yieldNow();
+            if (f % 10 === 0) {
+              videoProgress(f / n);
+              await yieldNow();
+            }
+          }
+          await enc.flush();
+          enc.close();
+          muxer.finalize();
+          return new Blob([muxer.target.buffer], { type: "video/mp4" });
+        }
+        // Fallback for browsers without WebCodecs: real-time capture, one loop long.
+        function recordRealtime(r, st, w, h, dur) {
+          return new Promise(function (ok, no) {
+            if (!window.MediaRecorder || !HTMLCanvasElement.prototype.captureStream)
+              return no(new Error("MediaRecorder unavailable"));
+            var types = ["video/mp4;codecs=avc1.640028", "video/mp4", "video/webm;codecs=vp9", "video/webm"],
+              type =
+                types.filter(function (x) {
+                  return MediaRecorder.isTypeSupported(x);
+                })[0] || "video/webm";
+            var rec = new MediaRecorder(exCanvas.captureStream(60), { mimeType: type, videoBitsPerSecond: 20e6 }),
+              chunks = [];
+            rec.ondataavailable = function (e) {
+              if (e.data.size) chunks.push(e.data);
+            };
+            rec.onstop = function () {
+              ok({ blob: new Blob(chunks, { type: type }), ext: type.indexOf("mp4") >= 0 ? "mp4" : "webm" });
+            };
+            r.render(st, 0);
+            rec.start();
+            var t0 = performance.now();
+            (function step(now) {
+              var e = now - t0;
+              if (e >= dur) {
+                r.render(st, 0);
+                setTimeout(function () {
+                  rec.stop();
+                }, 60);
+                return;
+              }
+              r.render(st, e / dur);
+              videoProgress(e / dur);
+              requestAnimationFrame(step);
+            })(t0);
+          });
+        }
+        $("#btnVideo").onclick = async function () {
+          if (recording) return;
+          var sz = exportSize(),
+            long = Math.min(2560, +$("#selSize").value),
+            w,
+            h;
+          if (sz[0] >= sz[1]) {
+            w = long;
+            h = Math.round((long * sz[1]) / sz[0]);
+          } else {
+            h = long;
+            w = Math.round((long * sz[0]) / sz[1]);
+          }
+          w -= w % 2;
+          h -= h % 2;
+          var r = exportRenderer(w, h),
+            st = exportState(),
+            dur = loopLen() * 1000;
+          recording = true;
+          $("#btnVideo").classList.add("lime");
+          videoProgress(0);
+          try {
+            if (window.VideoEncoder && window.VideoFrame) {
+              try {
+                videoDone(await recordFrames(r, st, w, h, dur), "mp4", w, h);
+                return;
+              } catch (e) {
+                console.warn("WebCodecs path failed, falling back", e);
+              }
+            }
+            var res = await recordRealtime(r, st, w, h, dur);
+            videoDone(res.blob, res.ext, w, h);
+          } catch (e) {
+            recording = false;
+            $("#btnVideo").classList.remove("lime");
+            $("#lblVideo").textContent = t("video");
+            toast(String(e.message || e));
+          }
+        };
+
+        function grainSvg(op) {
+          return (
+            "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .5 0 0 0 0 .5 0 0 0 0 .5 0 0 0 " +
+            op +
+            " 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E\")"
+          );
+        }
+        function exportId() {
+          return "g4-" + Date.now().toString(36).slice(-5) + Math.random().toString(36).slice(2, 6);
+        }
+        var lastId = "";
+        function cssText() {
+          var layers, base;
+          if (S.mode === 0) {
+            base = S.colors[0];
+            layers = S.colors.map(function (c, i) {
+              var q = toScreen(S.points[i]);
+              return (
+                "    radial-gradient(at " +
+                ((q[0] / innerWidth) * 100).toFixed(1) +
+                "% " +
+                ((q[1] / innerHeight) * 100).toFixed(1) +
+                "%, " +
+                c +
+                " 0px, transparent " +
+                Math.round(45 + S.soft * 25) +
+                "%)"
+              );
+            });
+          } else if (S.mode === 3) {
+            var q = toScreen(S.focus);
+            base = S.colors[0];
+            layers = [
+              "    radial-gradient(circle at " +
+                ((q[0] / innerWidth) * 100).toFixed(1) +
+                "% " +
+                ((q[1] / innerHeight) * 100).toFixed(1) +
+                "%, " +
+                S.colors
+                  .slice()
+                  .reverse()
+                  .map(function (c, i, a) {
+                    return c + " " + Math.round((i / (a.length - 1)) * 80) + "%";
+                  })
+                  .join(", ") +
+                ")",
+            ];
+          } else {
+            base = S.colors[0];
+            layers = ["    linear-gradient(" + Math.round(160 + S.angle) + "deg, " + S.colors.join(", ") + ")"];
+          }
+          lastId = exportId();
+          return (
+            "/* gr4dient · r352.com/gr4dient · " +
+            lastId +
+            ' */\n.r352-gr4dient {\n  --gr4dient: "' +
+            lastId +
+            '";\n  position: relative;\n  background-color: ' +
+            base +
+            ";\n  background-image:\n" +
+            layers.join(",\n") +
+            ';\n}\n.r352-gr4dient::after {\n  content: "";\n  position: absolute;\n  inset: 0;\n  pointer-events: none;\n  background-image: ' +
+            grainSvg((S.grain * 2.2).toFixed(2)) +
+            ";\n  mix-blend-mode: overlay;\n}\n"
+          );
+        }
+        $("#btnCss").onclick = function () {
+          copy(cssText(), t("cssCopied"));
+        };
+        $("#btnCode").onclick = function () {
+          var st = exportState();
+          delete st.name;
+          lastId = exportId();
+          var code =
+            "<!-- gr4dient · r352.com/gr4dient · " +
+            lastId +
+            ' -->\n<div style="position:relative;width:100%;height:100%;min-height:320px;background:' +
+            S.colors[0] +
+            '">\n  <canvas style="position:absolute;inset:0;width:100%;height:100%;display:block"></canvas>\n</div>\n<script>\n' +
+            $("#grain-core").textContent.trim() +
+            '\nR352Gr4dient.mount(document.currentScript.previousElementSibling.querySelector("canvas"),' +
+            JSON.stringify(st) +
+            ',"' +
+            lastId +
+            '");\n<\u002fscript>\n';
+          copy(code, t("codeCopied"));
+        };
+        $("#btnLink").onclick = function () {
+          saveHash();
+          copy(location.href, t("linkCopied"));
+        };
+        function copy(txt, msg) {
+          (navigator.clipboard ? navigator.clipboard.writeText(txt) : Promise.reject()).then(
+            function () {
+              toast(msg);
+            },
+            function () {
+              var ta = document.createElement("textarea");
+              ta.value = txt;
+              document.body.appendChild(ta);
+              ta.select();
+              try {
+                document.execCommand("copy");
+                toast(msg);
+              } catch {}
+              ta.remove();
+            },
+          );
+        }
+        var loopEl = $("#loop"),
+          loopCur = $("#loopCur");
+        function syncLoop() {
+          var n = S.bars || 4;
+          if (loopEl.dataset.n != n) {
+            loopEl.querySelectorAll(".tk").forEach(function (e) {
+              e.remove();
+            });
+            for (var i = 0; i <= n; i++) {
+              var k = document.createElement("span");
+              k.className = "tk";
+              k.style.top = (i / n) * 100 + "%";
+              loopEl.appendChild(k);
+            }
+            loopEl.dataset.n = n;
+          }
+          loopCur.style.top = phase * 100 + "%";
+        }
+        var tT;
+        function toast(m) {
+          var el = $("#toast");
+          el.textContent = m;
+          el.classList.add("on");
+          clearTimeout(tT);
+          tT = setTimeout(function () {
+            el.classList.remove("on");
+          }, 2400);
+        }
+
+        // ---------- on-brand dropdowns (native select stays as the value store) ----------
+        var CARET =
+          '<svg viewBox="0 0 10 6" aria-hidden="true"><path d="M1 1l4 4 4-4" fill="none" stroke="#D4FF00" stroke-width="1.5"/></svg>';
+        function buildDropdown(sel) {
+          var dd = document.createElement("div");
+          dd.className = "dd";
+          var btn = document.createElement("button");
+          btn.type = "button";
+          btn.className = "dd-btn";
+          btn.setAttribute("aria-haspopup", "listbox");
+          btn.setAttribute("aria-expanded", "false");
+          btn.setAttribute("aria-label", sel.getAttribute("aria-label"));
+          var ul = document.createElement("ul");
+          ul.className = "dd-list";
+          ul.setAttribute("role", "listbox");
+          var opts = [].slice.call(sel.options),
+            kb = -1;
+          function label() {
+            var o = sel.options[sel.selectedIndex];
+            btn.innerHTML = "<span>" + o.textContent + "</span>" + CARET;
+          }
+          function render() {
+            ul.innerHTML = "";
+            opts.forEach(function (o, i) {
+              var li = document.createElement("li");
+              li.setAttribute("role", "option");
+              li.setAttribute("aria-selected", i === sel.selectedIndex);
+              li.innerHTML = "<span>" + o.textContent + "</span>";
+              if (i === kb) li.className = "kb";
+              li.onclick = function () {
+                pick(i);
+              };
+              ul.appendChild(li);
+            });
+          }
+          function open(v) {
+            dd.classList.toggle("open", v);
+            btn.setAttribute("aria-expanded", v);
+            if (v) {
+              kb = sel.selectedIndex;
+              render();
+              document.querySelectorAll(".dd.open").forEach(function (x) {
+                if (x !== dd) x.classList.remove("open");
+              });
+            }
+          }
+          function pick(i) {
+            open(false);
+            sel.selectedIndex = i;
+            sel.dispatchEvent(new Event("change"));
+            label();
+            render();
+            btn.focus();
+          }
+          btn.onclick = function () {
+            open(!dd.classList.contains("open"));
+          };
+          btn.onkeydown = function (e) {
+            var isOpen = dd.classList.contains("open");
+            if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+              e.preventDefault();
+              if (!isOpen) {
+                open(true);
+                return;
+              }
+              kb = (kb + (e.key === "ArrowDown" ? 1 : -1) + opts.length) % opts.length;
+              render();
+            } else if ((e.key === "Enter" || e.key === " ") && isOpen) {
+              e.preventDefault();
+              e.stopPropagation();
+              pick(kb);
+            } else if (e.key === "Escape" && isOpen) {
+              e.preventDefault();
+              open(false);
+            }
+          };
+          document.addEventListener("click", function (e) {
+            if (!dd.contains(e.target)) open(false);
+          });
+          sel.parentNode.insertBefore(dd, sel);
+          dd.appendChild(btn);
+          dd.appendChild(ul);
+          label();
+          render();
+        }
+        buildDropdown($("#selAspect"));
+        buildDropdown($("#selSize"));
+
+        // ---------- boot ----------
+        if (innerWidth <= 760) $("#panel").classList.add("min");
+        buildSliders();
+        buildPresets();
+        applyLang();
+        syncControls();
+        resize();
+        requestAnimationFrame(tick);
+        window.__grain = {
+          get state() {
+            return S;
+          },
+          draw: draw,
+          presets: PRESETS,
+        };
+      })();
+    </script>
+  </body>
+</html>
