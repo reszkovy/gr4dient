@@ -24,7 +24,7 @@ export default [
   },
   {
     // the callbacks passed to page.evaluate run inside the browser
-    files: ["scripts/smoke.mjs"],
+    files: ["scripts/smoke.mjs", "scripts/screenshot.mjs"],
     languageOptions: { globals: { ...globals.node, ...globals.browser } },
   },
 ];

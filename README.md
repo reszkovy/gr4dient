@@ -5,7 +5,7 @@ and the number of bars, and every loop ends on the bar, so it cuts cleanly to mu
 
 Live: [r352.com/gr4dient](https://www.r352.com/gr4dient)
 
-![gr4dient](og.jpg)
+![gr4dient interface: gradient canvas with draggable color points and the control panel](docs/interface.jpg)
 
 ## What it does
 
@@ -61,6 +61,7 @@ How the page is built (renderer, state, exports): [ARCHITECTURE.md](ARCHITECTURE
 | `index.html` | the whole tool: editor, WebGL renderer, exporters |
 | `fonts/PlusJakartaSans-wght.woff2` | interface font (SIL OFL 1.1, see `fonts/OFL.txt`) |
 | `og.jpg`, `favicon.svg` | share image and icon |
+| `docs/interface.jpg` | README screenshot, made by `npm run screenshot` |
 | `scripts/check.mjs`, `scripts/smoke.mjs` | static check and browser smoke test, both run by CI on every push |
 
 ## License
