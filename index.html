@@ -56,6 +56,20 @@
         "creator": { "@type": "Organization", "name": "r352", "url": "https://www.r352.com/" }
       }
     </script>
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "SoftwareSourceCode",
+        "name": "gr4dient",
+        "codeRepository": "https://github.com/reszkovy/gr4dient",
+        "license": "https://opensource.org/licenses/MIT",
+        "programmingLanguage": ["JavaScript", "GLSL", "HTML"],
+        "runtimePlatform": "Web browser (WebGL, WebCodecs)",
+        "url": "https://www.r352.com/gr4dient",
+        "author": { "@type": "Organization", "name": "r352", "url": "https://www.r352.com/" },
+        "targetProduct": { "@type": "WebApplication", "name": "gr4dient", "url": "https://www.r352.com/gr4dient" }
+      }
+    </script>
     <link rel="icon" type="image/svg+xml" href="favicon.svg" />
     <link rel="preconnect" href="https://api.fontshare.com" />
     <link rel="stylesheet" href="https://api.fontshare.com/v2/css?f[]=tanker@400&display=swap" />
@@ -1154,6 +1168,14 @@
       .panel-foot a:hover {
         color: var(--lime);
       }
+      .note a {
+        color: var(--lime);
+        text-decoration: none;
+        border-bottom: 1px solid rgba(212, 255, 0, 0.35);
+      }
+      .note a:hover {
+        border-bottom-color: var(--lime);
+      }
       .sheet-grip {
         display: none;
       }
@@ -1536,13 +1558,22 @@
             >Motion is tied to tempo: set the BPM and the number of bars, and the loop ends exactly on the bar, so it
             cuts cleanly to music. No sign-up, nothing is uploaded, the link keeps your settings.</p
           >
+          <p class="note"
+            ><span data-i18n="about3">Open source under the MIT license. Code, architecture notes and tests:</span>
+            <a href="https://github.com/reszkovy/gr4dient" target="_blank" rel="noopener"
+              >github.com/reszkovy/gr4dient</a
+            ></p
+          >
         </section>
       </div>
       <div class="panel-foot"
         ><span class="lang" role="group" aria-label="Language"
           ><button data-lang="en" aria-pressed="true">EN</button> /
           <button data-lang="pl" aria-pressed="false">PL</button></span
-        ><a href="https://www.r352.com/" target="_blank" rel="noopener">r352.com</a></div
+        ><span class="foot-links"
+          ><a href="https://github.com/reszkovy/gr4dient" target="_blank" rel="noopener">GitHub</a> ·
+          <a href="https://www.r352.com/" target="_blank" rel="noopener">r352.com</a></span
+        ></div
       >
     </aside>
 
@@ -1819,6 +1850,7 @@
               "gr4dient is a free gradient generator that runs in your browser. Build mesh gradients from up to five colours, switch to flowing, folded or light-beam modes, add grain or dither, and export a PNG or a looping MP4 for backgrounds, slides, social posts and websites.",
             about2:
               "Motion is tied to tempo: set the BPM and the number of bars, and the loop ends exactly on the bar, so it cuts cleanly to music. No sign-up, nothing is uploaded, the link keeps your settings.",
+            about3: "Open source under the MIT license. Code, architecture notes and tests:",
             scale: "Scale",
             warp: "Warp",
             soft: "Softness",
@@ -1881,6 +1913,7 @@
               "gr4dient to darmowy generator gradientów w przeglądarce. Zbudujesz gradient siatkowy z maksymalnie pięciu kolorów, przełączysz go w nurt, fałdę albo wiązkę światła, dodasz ziarno lub dithering i pobierzesz PNG albo zapętlone MP4 na tła, slajdy, posty i strony.",
             about2:
               "Ruch jest związany z tempem: ustawiasz BPM i liczbę taktów, a pętla kończy się dokładnie na takcie, więc równo tnie się pod muzykę. Bez rejestracji, nic nie jest wysyłane, link zapamiętuje ustawienia.",
+            about3: "Otwarty kod na licencji MIT. Kod, opis architektury i testy:",
             scale: "Skala",
             warp: "Zawirowanie",
             soft: "Miękkość",

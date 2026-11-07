@@ -19,6 +19,20 @@ Live: [r352.com/gr4dient](https://www.r352.com/gr4dient)
 - `prefers-reduced-motion` gets one still frame.
 - English and Polish interface.
 
+## Engineering notes
+
+Three decisions that make the output usable in production, not only pretty in a demo:
+
+- **Colors mix in Oklab, not sRGB.** Two saturated hues blended in sRGB pass through grey; in Oklab they stay
+  vivid, so a five-color mesh never goes muddy in the middle.
+- **Video is frame-exact.** Every frame is rendered at phase `i/n` of the loop and encoded with WebCodecs, so the
+  file does not depend on the screen refresh rate or a background tab, and the last frame meets the first.
+  The loop length is `bars * 240 / bpm` seconds, so it cuts on the beat of the track it is set to.
+- **The embed is the editor's own renderer.** The "Code" export copies the same script the editor draws with,
+  plus the current state, so what you design is pixel for pixel what ships on the site.
+
+Details: [ARCHITECTURE.md](ARCHITECTURE.md).
+
 ## Run it
 
 It is one HTML file with no build step. Serve the folder with any static host:
@@ -55,4 +69,5 @@ Code: MIT, see [LICENSE](LICENSE). Third-party parts and their licenses:
 [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md). The r352 name and logo are not covered by
 the MIT license.
 
-Made by [r352](https://www.r352.com). More tools and the studio behind them: [r352.com](https://www.r352.com).
+Made by [r352](https://www.r352.com) - design operations for brands delivering at scale.
+The live version runs at [r352.com/gr4dient](https://www.r352.com/gr4dient).
